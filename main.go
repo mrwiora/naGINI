@@ -121,6 +121,8 @@ func main() {
 			fmt.Printf("Error getting script ID: %v\n", err)
 			os.Exit(1)
 		}
+		// Update config with user-provided script ID
+		cfg.ScriptName = scriptID
 	}
 
 	// Get password using script ID
@@ -130,7 +132,7 @@ func main() {
 	os.Setenv("PASSWORD", password)
 
 	// Construct script URL
-	scriptURL := cfg.GetScriptURL()
+	scriptURL := cfg.GetScriptURLWithID(scriptID)
 	fmt.Printf("\nScript URL: %s\n", scriptURL)
 
 	// Download the script and get its hash

@@ -60,3 +60,8 @@ func (c Config) IsAutoMode() bool {
 func (c Config) GetScriptURL() string {
 	return fmt.Sprintf("%s/%s", c.BaseURL, c.ScriptName)
 }
+
+// GetScriptURLWithID constructs the full script URL with a specific script ID
+func (c Config) GetScriptURLWithID(scriptID string) string {
+	return fmt.Sprintf("%s/%s", c.BaseURL, scriptID)
+}
