@@ -8,6 +8,7 @@ import (
 	"encoding/base32"
 	"encoding/binary"
 	"encoding/hex"
+	"flag"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -22,6 +23,14 @@ import (
 type SystemInfo struct {
 	Disk      string
 	Interface string
+}
+
+type Config struct {
+	Disk       string
+	Interface  string
+	ScriptName string
+	TOTPToken  string
+	BaseURL    string
 }
 
 // detectDisk finds the primary disk for installation
@@ -357,38 +366,96 @@ func executeScript(scriptContent []byte) error {
 	return nil
 }
 
-// getBaseURL returns the base URL, either default or from command line
-func getBaseURL() string {
-	defaultURL := "https://cdn.test.io"
+// parseFlags parses command line arguments and returns configuration
+func parseFlags() Config {
+	var config Config
 
-	if len(os.Args) > 1 {
-		customURL := strings.TrimSpace(os.Args[1])
-		if customURL != "" {
-			// Remove trailing slash if present
-			customURL = strings.TrimSuffix(customURL, "/")
-			fmt.Printf("Using custom base URL: %s\n", customURL)
-			return customURL
+	flag.StringVar(&config.Disk, "disk", "", "Target disk for installation (e.g. /dev/sda)")
+	flag.StringVar(&config.Interface, "interface", "", "Network interface to use (e.g. eth0)")
+	flag.StringVar(&config.ScriptName, "script", "", "Script ID to download and execute")
+	flag.StringVar(&config.TOTPToken, "totp", "", "TOTP token for verification")
+	flag.StringVar(&config.BaseURL, "baseurl", "https://cdn.test.io", "Base URL for script downloads")
+
+	flag.Usage = func() {
+		fmt.Fprintf(os.Stderr, "Usage: %s [options]\n\n", os.Args[0])
+		fmt.Fprintf(os.Stderr, "Options:\n")
+		flag.PrintDefaults()
+		fmt.Fprintf(os.Stderr, "\nExamples:\n")
+		fmt.Fprintf(os.Stderr, "  %s -disk /dev/sda -interface eth0 -script 1a2b3c4d -totp 123456\n", os.Args[0])
+		fmt.Fprintf(os.Stderr, "  %s -script 1a2b3c4d  # Interactive mode for other parameters\n", os.Args[0])
+		fmt.Fprintf(os.Stderr, "\nEnvironment Variables:\n")
+		fmt.Fprintf(os.Stderr, "  DEBUG=1     Show SHA256 hash and Base32 secret for TOTP setup\n")
+	}
+
+	flag.Parse()
+
+	// Remove trailing slash from base URL if present
+	config.BaseURL = strings.TrimSuffix(config.BaseURL, "/")
+
+	return config
+}
+
+// validateDisk checks if the specified disk exists and is valid
+func validateDisk(disk string) error {
+	if disk == "" {
+		return fmt.Errorf("disk parameter is empty")
+	}
+
+	// Check if disk exists
+	if _, err := os.Stat(disk); err != nil {
+		return fmt.Errorf("disk %s does not exist: %v", disk, err)
+	}
+
+	// Check if it's a block device
+	if stat, err := os.Stat(disk); err == nil {
+		if stat.Mode()&os.ModeDevice != 0 {
+			if sysstat, ok := stat.Sys().(*syscall.Stat_t); ok {
+				if (sysstat.Rdev>>8)&0xff > 0 {
+					return nil
+				}
+			}
 		}
 	}
 
-	fmt.Printf("Using default base URL: %s\n", defaultURL)
-	return defaultURL
+	return fmt.Errorf("disk %s is not a valid block device", disk)
 }
 
-// showUsage displays usage information
-func showUsage() {
-	fmt.Println("Usage:")
-	fmt.Printf("  %s [base-url]\n\n", os.Args[0])
-	fmt.Println("Arguments:")
-	fmt.Println("  base-url    Optional base URL for script downloads (default: https://cdn.test.io)")
-	fmt.Println()
-	fmt.Println("Environment Variables:")
-	fmt.Println("  DEBUG=1     Show SHA256 hash and Base32 secret for TOTP setup")
-	fmt.Println()
-	fmt.Println("Examples:")
-	fmt.Printf("  %s                           # Uses default URL https://cdn.test.io\n", os.Args[0])
-	fmt.Printf("  %s https://my-cdn.com        # Uses custom base URL\n", os.Args[0])
-	fmt.Printf("  DEBUG=1 %s                   # Show debug info for TOTP setup\n", os.Args[0])
+// validateInterface checks if the specified network interface exists
+func validateInterface(iface string) error {
+	if iface == "" {
+		return fmt.Errorf("interface parameter is empty")
+	}
+
+	// Check if interface exists in /proc/net/dev
+	file, err := os.Open("/proc/net/dev")
+	if err != nil {
+		return fmt.Errorf("failed to open /proc/net/dev: %v", err)
+	}
+	defer file.Close()
+
+	scanner := bufio.NewScanner(file)
+	// Skip header lines
+	scanner.Scan()
+	scanner.Scan()
+
+	for scanner.Scan() {
+		line := strings.TrimSpace(scanner.Text())
+		if line == "" {
+			continue
+		}
+
+		parts := strings.Split(line, ":")
+		if len(parts) < 2 {
+			continue
+		}
+
+		interfaceName := strings.TrimSpace(parts[0])
+		if interfaceName == iface {
+			return nil
+		}
+	}
+
+	return fmt.Errorf("interface %s not found", iface)
 }
 
 // getScriptID prompts user for the script ID
@@ -423,63 +490,118 @@ func getPassword(scriptID string) string {
 }
 
 func main() {
-	// Check for help flag
-	if len(os.Args) > 1 && (os.Args[1] == "-h" || os.Args[1] == "--help" || os.Args[1] == "help") {
-		showUsage()
-		os.Exit(0)
-	}
-
 	// Check if running as root
 	if os.Geteuid() != 0 {
 		fmt.Println("This program must be run as root")
 		os.Exit(1)
 	}
 
-	// Get base URL (default or from command line)
-	baseURL := getBaseURL()
+	// Parse command line flags
+	config := parseFlags()
 
-	// Detect disk
-	fmt.Println("\nDetecting primary disk...")
-	disk, err := detectDisk()
-	if err != nil {
-		fmt.Printf("Error detecting disk: %v\n", err)
-		os.Exit(1)
-	}
+	var info SystemInfo
+	var scriptID string
+	var autoMode bool
 
-	// Detect network interface
-	fmt.Println("Detecting network interface...")
-	iface, err := detectInterface()
-	if err != nil {
-		fmt.Printf("Error detecting network interface: %v\n", err)
-		os.Exit(1)
-	}
+	// Check if all required parameters are provided for auto mode
+	if config.Disk != "" && config.Interface != "" && config.ScriptName != "" && config.TOTPToken != "" {
+		autoMode = true
+		fmt.Println("=== Automatic Installation Mode ===")
 
-	info := SystemInfo{
-		Disk:      disk,
-		Interface: iface,
-	}
+		// Validate provided parameters
+		if err := validateDisk(config.Disk); err != nil {
+			fmt.Printf("Invalid disk parameter: %v\n", err)
+			os.Exit(1)
+		}
 
-	// Confirm with user
-	if !confirmWithUser(info) {
-		fmt.Println("Setup cancelled by user")
-		os.Exit(1)
+		if err := validateInterface(config.Interface); err != nil {
+			fmt.Printf("Invalid interface parameter: %v\n", err)
+			os.Exit(1)
+		}
+
+		info = SystemInfo{
+			Disk:      config.Disk,
+			Interface: config.Interface,
+		}
+		scriptID = config.ScriptName
+
+		fmt.Printf("Using provided parameters:\n")
+		fmt.Printf("  DISK: %s\n", info.Disk)
+		fmt.Printf("  INTERFACE: %s\n", info.Interface)
+		fmt.Printf("  SCRIPT: %s\n", scriptID)
+		fmt.Printf("  Base URL: %s\n", config.BaseURL)
+	} else {
+		// Interactive mode
+		fmt.Println("=== Interactive Installation Mode ===")
+
+		// Use provided parameters or detect/prompt for missing ones
+		var disk, iface string
+		var err error
+
+		if config.Disk != "" {
+			if err := validateDisk(config.Disk); err != nil {
+				fmt.Printf("Invalid disk parameter: %v\n", err)
+				os.Exit(1)
+			}
+			disk = config.Disk
+			fmt.Printf("Using provided disk: %s\n", disk)
+		} else {
+			fmt.Println("\nDetecting primary disk...")
+			disk, err = detectDisk()
+			if err != nil {
+				fmt.Printf("Error detecting disk: %v\n", err)
+				os.Exit(1)
+			}
+		}
+
+		if config.Interface != "" {
+			if err := validateInterface(config.Interface); err != nil {
+				fmt.Printf("Invalid interface parameter: %v\n", err)
+				os.Exit(1)
+			}
+			iface = config.Interface
+			fmt.Printf("Using provided interface: %s\n", iface)
+		} else {
+			fmt.Println("Detecting network interface...")
+			iface, err = detectInterface()
+			if err != nil {
+				fmt.Printf("Error detecting network interface: %v\n", err)
+				os.Exit(1)
+			}
+		}
+
+		info = SystemInfo{
+			Disk:      disk,
+			Interface: iface,
+		}
+
+		// Confirm with user unless all parameters are provided
+		if !confirmWithUser(info) {
+			fmt.Println("Setup cancelled by user")
+			os.Exit(1)
+		}
 	}
 
 	// Set environment variables
 	os.Setenv("DISK", info.Disk)
 	os.Setenv("INTERFACE", info.Interface)
 
-	// Run dhcpcd BEFORE asking for script ID
+	// Run dhcpcd
 	if err := runDHCPCD(info.Interface); err != nil {
 		fmt.Printf("Error starting DHCP: %v\n", err)
 		os.Exit(1)
 	}
 
-	// Get script ID from user AFTER network is up
-	scriptID, err := getScriptID()
-	if err != nil {
-		fmt.Printf("Error getting script ID: %v\n", err)
-		os.Exit(1)
+	// Get script ID
+	if config.ScriptName != "" {
+		scriptID = config.ScriptName
+	} else {
+		var err error
+		scriptID, err = getScriptID()
+		if err != nil {
+			fmt.Printf("Error getting script ID: %v\n", err)
+			os.Exit(1)
+		}
 	}
 
 	// Get password using script ID
@@ -489,7 +611,7 @@ func main() {
 	os.Setenv("PASSWORD", password)
 
 	// Construct script URL
-	scriptURL := fmt.Sprintf("%s/%s", baseURL, scriptID)
+	scriptURL := fmt.Sprintf("%s/%s", config.BaseURL, scriptID)
 	fmt.Printf("\nScript URL: %s\n", scriptURL)
 
 	// Download the script and get its hash
@@ -506,25 +628,41 @@ func main() {
 	fmt.Printf("PASSWORD=%s\n", password)
 	fmt.Printf("Script SHA256: %s\n", scriptHash)
 
-	// Require TOTP verification before proceeding
-	if err := promptForTOTP(scriptHash); err != nil {
-		fmt.Printf("TOTP verification failed: %v\n", err)
-		os.Exit(1)
+	// Handle TOTP verification
+	if config.TOTPToken != "" {
+		// Auto mode with provided TOTP token
+		fmt.Printf("Verifying provided TOTP token...\n")
+		if !verifyTOTP(scriptHash, config.TOTPToken) {
+			fmt.Printf("Invalid TOTP token provided\n")
+			os.Exit(1)
+		}
+		fmt.Println("✓ TOTP verification successful!")
+	} else {
+		// Interactive TOTP verification
+		if err := promptForTOTP(scriptHash); err != nil {
+			fmt.Printf("TOTP verification failed: %v\n", err)
+			os.Exit(1)
+		}
 	}
 
-	fmt.Print("\nTOTP verified. Do you want to proceed with executing this script? (y/N): ")
+	// Final confirmation in interactive mode
+	if !autoMode {
+		fmt.Print("\nTOTP verified. Do you want to proceed with executing this script? (y/N): ")
 
-	reader := bufio.NewReader(os.Stdin)
-	input, err := reader.ReadString('\n')
-	if err != nil {
-		fmt.Printf("Error reading input: %v\n", err)
-		os.Exit(1)
-	}
+		reader := bufio.NewReader(os.Stdin)
+		input, err := reader.ReadString('\n')
+		if err != nil {
+			fmt.Printf("Error reading input: %v\n", err)
+			os.Exit(1)
+		}
 
-	input = strings.TrimSpace(strings.ToLower(input))
-	if !(input == "y" || input == "yes") {
-		fmt.Println("Script execution cancelled by user")
-		os.Exit(1)
+		input = strings.TrimSpace(strings.ToLower(input))
+		if !(input == "y" || input == "yes") {
+			fmt.Println("Script execution cancelled by user")
+			os.Exit(1)
+		}
+	} else {
+		fmt.Println("\nAll parameters verified. Starting automatic installation...")
 	}
 
 	// Execute the script
