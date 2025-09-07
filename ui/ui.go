@@ -279,3 +279,41 @@ func ShowCountdown() {
 func ShowCompletion() {
 	fmt.Printf("\n%sArch Linux auto setup completed successfully!%s\n", Green, Reset)
 }
+
+// ShowScriptContent displays script content with line numbers for review
+func ShowScriptContent(scriptContent []byte) {
+	fmt.Printf("%s=== SCRIPT CONTENT ===%s\n", Yellow, Reset)
+	fmt.Printf("%sThe following script will be executed:%s\n\n", Yellow, Reset)
+
+	// Display script content with line numbers for easier review
+	lines := strings.Split(string(scriptContent), "\n")
+	for i, line := range lines {
+		fmt.Printf("%s%3d:%s %s\n", Cyan, i+1, Reset, line)
+	}
+
+	fmt.Printf("\n%s==============================%s\n", Yellow, Reset)
+}
+
+// ShowCustomBaseURLWarning displays warning about custom base URL
+func ShowCustomBaseURLWarning(baseURL string) {
+	fmt.Printf("\n%s=== SECURITY WARNING ===%s\n", Red, Reset)
+	fmt.Printf("%s⚠️  CUSTOM BASE URL DETECTED ⚠️%s\n", Red, Reset)
+	fmt.Printf("%sYou are using a custom base URL: %s%s%s\n", Red, Yellow, baseURL, Reset)
+	fmt.Printf("%sbaseurl is custom, so the server might be manipulated and showing something else, then the produced script contains.%s\n", Red, Reset)
+	fmt.Printf("%s========================%s\n\n", Red, Reset)
+}
+
+// ConfirmCustomBaseURLAcknowledgment asks user to acknowledge the custom base URL warning
+func ConfirmCustomBaseURLAcknowledgment() bool {
+	fmt.Printf("\n%sDo you understand the security risks and want to proceed with this custom script? (y/N): %s", Red, Reset)
+
+	reader := bufio.NewReader(os.Stdin)
+	input, err := reader.ReadString('\n')
+	if err != nil {
+		fmt.Printf("Error reading input: %v\n", err)
+		return false
+	}
+
+	input = strings.TrimSpace(strings.ToLower(input))
+	return input == "y" || input == "yes"
+}

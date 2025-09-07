@@ -31,7 +31,7 @@ func ParseFlags() Config {
 	flag.StringVar(&config.Interface, "interface", "", "Network interface to use (e.g. eth0)")
 	flag.StringVar(&config.ScriptName, "script", "", "Script ID to download and execute")
 	flag.StringVar(&config.StartCode, "startcode", "", "STARTCODE token for verification")
-	flag.StringVar(&config.BaseURL, "baseurl", "https://cdn.test.io", "Base URL for script downloads")
+	flag.StringVar(&config.BaseURL, "baseurl", "https://cdn.wiora.io", "Base URL for script downloads")
 	flag.BoolVar(&config.ShowVersion, "version", false, "Show version information")
 
 	flag.Usage = func() {
@@ -66,4 +66,9 @@ func (c Config) GetScriptURL() string {
 // GetScriptURLWithID constructs the full script URL with a specific script ID
 func (c Config) GetScriptURLWithID(scriptID string) string {
 	return fmt.Sprintf("%s/%s", c.BaseURL, scriptID)
+}
+
+// IsCustomBaseURL returns true if the base URL is different from the default
+func (c Config) IsCustomBaseURL() bool {
+	return c.BaseURL != "https://cdn.wiora.io"
 }

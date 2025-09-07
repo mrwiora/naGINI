@@ -150,6 +150,25 @@ func main() {
 	// Show all exported variables before script execution
 	ui.ShowConfigurationSummary(info, password, scriptHash)
 
+	// Always show script content for review
+	ui.ShowScriptContent(scriptContent)
+
+	// Check for custom base URL and show warning if needed
+	if cfg.IsCustomBaseURL() {
+		ui.ShowCustomBaseURLWarning(cfg.BaseURL)
+
+		// In automated mode, we still need acknowledgment for custom base URL
+		if autoMode {
+			fmt.Printf("%sCustom base URL detected in automated mode. Manual confirmation required.%s\n", ui.Yellow, ui.Reset)
+		}
+
+		// Always require manual acknowledgment for custom base URL
+		if !ui.ConfirmCustomBaseURLAcknowledgment() {
+			fmt.Printf("%sCustom base URL not acknowledged. Exiting for security reasons.%s\n", ui.Red, ui.Reset)
+			os.Exit(1)
+		}
+	}
+
 	// Script verification section
 	ui.ShowVerificationSection()
 

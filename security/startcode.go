@@ -76,9 +76,7 @@ func VerifySTARTCODE(secret, token string) bool {
 
 // DisplayScriptContent displays the script content to the user
 func DisplayScriptContent(scriptContent []byte) {
-	fmt.Printf("\n%s=== Script Content ===%s\n", ui.Red, ui.Reset)
-	fmt.Printf("%s%s%s", ui.Red, string(scriptContent), ui.Reset)
-	fmt.Printf("\n%s=== End of Script ===%s\n\n", ui.Red, ui.Reset)
+	ui.ShowScriptContent(scriptContent)
 }
 
 // PromptForSTARTCODE prompts user for STARTCODE token and verifies it
