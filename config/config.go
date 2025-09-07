@@ -40,7 +40,7 @@ func ParseFlags() Config {
 		flag.PrintDefaults()
 		fmt.Fprintf(os.Stderr, "\nExamples:\n")
 		fmt.Fprintf(os.Stderr, "  %s -disk /dev/sda -interface eth0 -script 1a2b3c4d -startcode 123456\n", os.Args[0])
-		fmt.Fprintf(os.Stderr, "  %s -script 1a2b3c4d  # Interactive mode for other parameters\n", os.Args[0])
+		fmt.Fprintf(os.Stderr, "  %s -script 1234affe  # Interactive mode for other parameters\n", os.Args[0])
 		fmt.Fprintf(os.Stderr, "\nEnvironment Variables:\n")
 		fmt.Fprintf(os.Stderr, "  DEBUG=1     Show SHA256 hash and Base32 secret for STARTCODE setup\n")
 	}

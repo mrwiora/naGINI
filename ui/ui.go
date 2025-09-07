@@ -40,7 +40,7 @@ func ConfirmWithUser(info config.SystemInfo) bool {
 
 // GetScriptID prompts user for the script ID
 func GetScriptID() (string, error) {
-	fmt.Print("Enter the script ID (e.g., 1a2b3c4d): ")
+	fmt.Print("Enter the script ID (e.g., 1234affe): ")
 	reader := bufio.NewReader(os.Stdin)
 	input, err := reader.ReadString('\n')
 	if err != nil {

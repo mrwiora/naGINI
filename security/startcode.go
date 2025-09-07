@@ -94,8 +94,6 @@ func PromptForSTARTCODE(scriptHash string, scriptContent []byte) error {
 		fmt.Printf("\n%s=== STARTCODE Debug Information ===%s\n", ui.Blue, ui.Reset)
 		fmt.Printf("Script SHA256: %s%s%s\n", ui.Cyan, scriptHash, ui.Reset)
 		fmt.Printf("Base32 Secret: %s%s%s\n", ui.Cyan, base32Secret, ui.Reset)
-		fmt.Printf("Add this base32 secret to your authenticator app.\n")
-		fmt.Printf("Generate a STARTCODE using your authenticator app.\n")
 		fmt.Printf("%s========================================%s\n", ui.Blue, ui.Reset)
 	}
 
