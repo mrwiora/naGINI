@@ -8,7 +8,6 @@ import (
 	"nagini/network"
 	"nagini/script"
 	"nagini/security"
-	"nagini/system"
 	"nagini/ui"
 )
 
@@ -45,20 +44,12 @@ func main() {
 		autoMode = true
 		ui.ShowAutoModeInfo(config.SystemInfo{}, cfg.ScriptName, cfg.BaseURL)
 
-		// Validate provided parameters
-		if err := system.ValidateDisk(cfg.Disk); err != nil {
-			fmt.Printf("%sInvalid disk parameter: %v%s\n", ui.Red, err, ui.Reset)
+		// Resolve system info for auto mode
+		var err error
+		info, err = ui.ResolveSystemInfoAuto(cfg.Disk, cfg.Interface)
+		if err != nil {
+			fmt.Printf("%s%v%s\n", ui.Red, err, ui.Reset)
 			os.Exit(1)
-		}
-
-		if err := system.ValidateInterface(cfg.Interface); err != nil {
-			fmt.Printf("%sInvalid interface parameter: %v%s\n", ui.Red, err, ui.Reset)
-			os.Exit(1)
-		}
-
-		info = config.SystemInfo{
-			Disk:      cfg.Disk,
-			Interface: cfg.Interface,
 		}
 		scriptID = cfg.ScriptName
 
@@ -67,48 +58,15 @@ func main() {
 		// Interactive mode
 		ui.ShowInteractiveModeInfo()
 
-		// Use provided parameters or detect/prompt for missing ones
-		var disk, iface string
+		// Resolve system info interactively
 		var err error
-
-		if cfg.Disk != "" {
-			if err := system.ValidateDisk(cfg.Disk); err != nil {
-				fmt.Printf("%sInvalid disk parameter: %v%s\n", ui.Red, err, ui.Reset)
-				os.Exit(1)
-			}
-			disk = cfg.Disk
-			ui.ShowProvidedParameter("disk", disk)
-		} else {
-			ui.ShowDetectionMessage("primary disk")
-			disk, err = system.DetectDisk()
-			if err != nil {
-				fmt.Printf("%sError detecting disk: %v%s\n", ui.Red, err, ui.Reset)
-				os.Exit(1)
-			}
+		info, err = ui.ResolveSystemInfoInteractive(cfg.Disk, cfg.Interface)
+		if err != nil {
+			fmt.Printf("%s%v%s\n", ui.Red, err, ui.Reset)
+			os.Exit(1)
 		}
 
-		if cfg.Interface != "" {
-			if err := system.ValidateInterface(cfg.Interface); err != nil {
-				fmt.Printf("%sInvalid interface parameter: %v%s\n", ui.Red, err, ui.Reset)
-				os.Exit(1)
-			}
-			iface = cfg.Interface
-			ui.ShowProvidedParameter("interface", iface)
-		} else {
-			ui.ShowDetectionMessage("network interface")
-			iface, err = system.DetectInterface()
-			if err != nil {
-				fmt.Printf("%sError detecting network interface: %v%s\n", ui.Red, err, ui.Reset)
-				os.Exit(1)
-			}
-		}
-
-		info = config.SystemInfo{
-			Disk:      disk,
-			Interface: iface,
-		}
-
-		// Confirm with user unless all parameters are provided
+		// Confirm with user
 		if !ui.ConfirmWithUser(info) {
 			fmt.Printf("%sSetup cancelled by user%s\n", ui.Yellow, ui.Reset)
 			os.Exit(1)
@@ -119,11 +77,17 @@ func main() {
 	os.Setenv("DISK", info.Disk)
 	os.Setenv("INTERFACE", info.Interface)
 
+	// Network configuration section
+	ui.ShowNetworkSection()
+
 	// Run dhcpcd
 	if err := network.RunDHCPCD(info.Interface); err != nil {
 		fmt.Printf("%sError starting DHCP: %v%s\n", ui.Red, err, ui.Reset)
 		os.Exit(1)
 	}
+
+	// Script configuration section
+	ui.ShowScriptSection()
 
 	// Get script ID
 	if cfg.ScriptName != "" {
@@ -167,6 +131,9 @@ func main() {
 	// Show all exported variables before script execution
 	ui.ShowConfigurationSummary(info, password, scriptHash)
 
+	// Script verification section
+	ui.ShowVerificationSection()
+
 	// Handle STARTCODE verification
 	if cfg.StartCode != "" {
 		// Auto mode with provided STARTCODE token
@@ -193,6 +160,9 @@ func main() {
 	} else {
 		ui.ShowStartAutoInstallation()
 	}
+
+	// Script execution section
+	ui.ShowExecutionSection()
 
 	// Execute the script
 	if err := script.ExecuteScript(scriptContent, info.Disk, info.Interface, password); err != nil {

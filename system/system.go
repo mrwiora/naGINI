@@ -185,3 +185,56 @@ func ValidateInterface(iface string) error {
 
 	return fmt.Errorf("interface %s not found", iface)
 }
+
+// ResolveDisk handles disk parameter resolution (provided or detected) with validation
+func ResolveDisk(providedDisk string) (string, error) {
+	if providedDisk != "" {
+		// Validate provided disk
+		if err := ValidateDisk(providedDisk); err != nil {
+			return "", fmt.Errorf("invalid disk parameter: %v", err)
+		}
+		return providedDisk, nil
+	}
+
+	// Auto-detect disk
+	disk, err := DetectDisk()
+	if err != nil {
+		return "", fmt.Errorf("error detecting disk: %v", err)
+	}
+
+	return disk, nil
+}
+
+// ResolveInterface handles interface parameter resolution (provided or detected) with validation
+func ResolveInterface(providedInterface string) (string, error) {
+	if providedInterface != "" {
+		// Validate provided interface
+		if err := ValidateInterface(providedInterface); err != nil {
+			return "", fmt.Errorf("invalid interface parameter: %v", err)
+		}
+		return providedInterface, nil
+	}
+
+	// Auto-detect interface
+	iface, err := DetectInterface()
+	if err != nil {
+		return "", fmt.Errorf("error detecting network interface: %v", err)
+	}
+
+	return iface, nil
+}
+
+// ResolveSystemInfo resolves both disk and interface parameters with validation
+func ResolveSystemInfo(providedDisk, providedInterface string) (string, string, error) {
+	disk, err := ResolveDisk(providedDisk)
+	if err != nil {
+		return "", "", err
+	}
+
+	iface, err := ResolveInterface(providedInterface)
+	if err != nil {
+		return "", "", err
+	}
+
+	return disk, iface, nil
+}

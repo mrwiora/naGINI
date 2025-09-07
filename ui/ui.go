@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"nagini/config"
+	"nagini/system"
 )
 
 // ScriptMetadata holds script metadata information
@@ -20,7 +21,7 @@ type ScriptMetadata struct {
 
 // ConfirmWithUser asks user to confirm the detected values
 func ConfirmWithUser(info config.SystemInfo) bool {
-	fmt.Printf("\n%s=== Arch Linux Auto Setup ===%s\n", Blue, Reset)
+	fmt.Printf("\n%s=== System Configuration Confirmation ===%s\n", Blue, Reset)
 	fmt.Printf("Detected DISK: %s%s%s\n", White, info.Disk, Reset)
 	fmt.Printf("Detected INTERFACE: %s%s%s\n", White, info.Interface, Reset)
 	fmt.Print("\nAre these values correct? (y/N): ")
@@ -99,7 +100,7 @@ func ShowInteractiveModeInfo() {
 
 // ShowConfigurationSummary displays all configuration before execution
 func ShowConfigurationSummary(info config.SystemInfo, password, scriptHash string) {
-	fmt.Printf("%s=== Configuration Summary ===%s\n", Blue, Reset)
+	fmt.Printf("\n%s=== Configuration Summary ===%s\n", Blue, Reset)
 	fmt.Printf("DISK=%s%s%s\n", White, info.Disk, Reset)
 	fmt.Printf("INTERFACE=%s%s%s\n", White, info.Interface, Reset)
 	fmt.Printf("PASSWORD=%s%s%s\n", White, password, Reset)
@@ -113,7 +114,7 @@ func ShowProvidedParameter(paramType, value string) {
 
 // ShowDetectionMessage displays detection messages
 func ShowDetectionMessage(what string) {
-	fmt.Printf("\n%sDetecting %s...%s\n", Yellow, what, Reset)
+	fmt.Printf("%sDetecting %s...%s\n", White, what, Reset)
 }
 
 // ShowStartAutoInstallation displays message when starting automatic installation
@@ -124,7 +125,7 @@ func ShowStartAutoInstallation() {
 // ShowVersion displays application version with banner
 func ShowVersion(version string) {
 	fmt.Printf("%s=============================================================================================%s\n", Blue, Reset)
-	fmt.Printf("%s naGINI v%s%s%s\n", Blue, White, version, Reset)
+	fmt.Printf("%s naGINI %s%s%s\n", Blue, White, version, Reset)
 	fmt.Printf("%s Arch Linux Webbased Installer%s\n", Blue, Reset)
 	fmt.Printf("%s Feedback and Security Issues here: %shttps://github.com/mrwiora/naGINI/issues%s\n", Blue, Cyan, Reset)
 	fmt.Printf("%s=============================================================================================%s\n\n", Blue, Reset)
@@ -157,6 +158,99 @@ func ShowScriptMetadata(metadata ScriptMetadata) {
 // ShowBaseURL displays which base URL is being used
 func ShowBaseURL(baseURL string) {
 	fmt.Printf("Using base URL: %s%s%s\n\n", Cyan, baseURL, Reset)
+}
+
+// ResolveDiskInteractive handles interactive disk resolution with UI feedback
+func ResolveDiskInteractive(providedDisk string) (string, error) {
+	if providedDisk != "" {
+		// User provided disk - validate and show it
+		disk, err := system.ResolveDisk(providedDisk)
+		if err != nil {
+			return "", err
+		}
+		ShowProvidedParameter("disk", disk)
+		return disk, nil
+	} else {
+		// Auto-detect disk with UI feedback
+		ShowDetectionMessage("primary disk")
+		disk, err := system.ResolveDisk("")
+		if err != nil {
+			return "", err
+		}
+		return disk, nil
+	}
+}
+
+// ResolveInterfaceInteractive handles interactive interface resolution with UI feedback
+func ResolveInterfaceInteractive(providedInterface string) (string, error) {
+	if providedInterface != "" {
+		// User provided interface - validate and show it
+		iface, err := system.ResolveInterface(providedInterface)
+		if err != nil {
+			return "", err
+		}
+		ShowProvidedParameter("interface", iface)
+		return iface, nil
+	} else {
+		// Auto-detect interface with UI feedback
+		ShowDetectionMessage("network interface")
+		iface, err := system.ResolveInterface("")
+		if err != nil {
+			return "", err
+		}
+		return iface, nil
+	}
+}
+
+// ResolveSystemInfoInteractive handles interactive system info resolution for both disk and interface
+func ResolveSystemInfoInteractive(providedDisk, providedInterface string) (config.SystemInfo, error) {
+	disk, err := ResolveDiskInteractive(providedDisk)
+	if err != nil {
+		return config.SystemInfo{}, err
+	}
+
+	iface, err := ResolveInterfaceInteractive(providedInterface)
+	if err != nil {
+		return config.SystemInfo{}, err
+	}
+
+	return config.SystemInfo{
+		Disk:      disk,
+		Interface: iface,
+	}, nil
+}
+
+// ResolveSystemInfoAuto handles auto mode system info resolution with validation
+func ResolveSystemInfoAuto(providedDisk, providedInterface string) (config.SystemInfo, error) {
+	disk, iface, err := system.ResolveSystemInfo(providedDisk, providedInterface)
+	if err != nil {
+		return config.SystemInfo{}, err
+	}
+
+	return config.SystemInfo{
+		Disk:      disk,
+		Interface: iface,
+	}, nil
+}
+
+// ShowNetworkSection displays network setup section header
+func ShowNetworkSection() {
+	fmt.Printf("\n%s=== System Preparation ===%s\n", Blue, Reset)
+}
+
+// ShowScriptSection displays script handling section header
+func ShowScriptSection() {
+	fmt.Printf("\n%s=== Script Configuration ===%s\n", Blue, Reset)
+}
+
+// ShowVerificationSection displays verification section header
+func ShowVerificationSection() {
+	fmt.Printf("\n%s=== Script Verification ===%s\n", Blue, Reset)
+}
+
+// ShowExecutionSection displays execution section header
+func ShowExecutionSection() {
+	fmt.Printf("\n%s=== Script Execution ===%s\n", Blue, Reset)
 }
 
 // ShowCompletion displays final success message
