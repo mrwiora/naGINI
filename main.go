@@ -170,6 +170,9 @@ func main() {
 	// Script execution section
 	ui.ShowExecutionSection()
 
+	// Show countdown before execution
+	ui.ShowCountdown()
+
 	// Execute the script
 	if err := script.ExecuteScript(scriptContent, info.Disk, info.Interface, password); err != nil {
 		fmt.Printf("%sError executing script: %v%s\n", ui.Red, err, ui.Reset)

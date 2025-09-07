@@ -6,6 +6,7 @@ import (
 	"os"
 	"regexp"
 	"strings"
+	"time"
 
 	"nagini/config"
 	"nagini/system"
@@ -259,6 +260,19 @@ func ShowVerificationSection() {
 // ShowExecutionSection displays execution section header
 func ShowExecutionSection() {
 	fmt.Printf("\n%s=== Script Execution ===%s\n", Blue, Reset)
+}
+
+// ShowCountdown displays a countdown from 5 to 0 in red
+func ShowCountdown() {
+	fmt.Printf("\nScript execution will begin in: ")
+	for i := 5; i >= 1; i-- {
+		fmt.Printf("%s%d%s", Red, i, Reset)
+		if i > 1 {
+			fmt.Printf(" • ")
+		}
+		time.Sleep(1 * time.Second)
+	}
+	fmt.Printf(" • %sExecuting now...%s\n\n", Red, Reset)
 }
 
 // ShowCompletion displays final success message
