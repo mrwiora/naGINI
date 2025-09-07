@@ -1,6 +1,7 @@
 package script
 
 import (
+	"bufio"
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
@@ -8,11 +9,58 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
+	"strings"
 	"time"
 )
 
-// DownloadScript downloads the script and returns its content and SHA256 hash
-func DownloadScript(url string) ([]byte, string, error) {
+// ScriptMetadata holds script metadata information
+type ScriptMetadata struct {
+	NaGINIVersion   string
+	Author          string
+	TemplateVersion string
+	Info            string
+}
+
+// ParseMetadata extracts metadata from script content
+func ParseMetadata(scriptContent []byte) ScriptMetadata {
+	metadata := ScriptMetadata{}
+	scanner := bufio.NewScanner(strings.NewReader(string(scriptContent)))
+
+	for scanner.Scan() {
+		line := strings.TrimSpace(scanner.Text())
+
+		// Skip non-metadata lines
+		if !strings.HasPrefix(line, "#@") {
+			continue
+		}
+
+		// Remove "#@" prefix and split by ":"
+		metaLine := strings.TrimSpace(line[2:])
+		parts := strings.SplitN(metaLine, ":", 2)
+		if len(parts) != 2 {
+			continue
+		}
+
+		key := strings.TrimSpace(parts[0])
+		value := strings.TrimSpace(parts[1])
+
+		switch key {
+		case "naGINI":
+			metadata.NaGINIVersion = value
+		case "Author":
+			metadata.Author = value
+		case "Template-Version":
+			metadata.TemplateVersion = value
+		case "Info":
+			metadata.Info = value
+		}
+	}
+
+	return metadata
+}
+
+// DownloadScript downloads the script and returns its content, SHA256 hash, and metadata
+func DownloadScript(url string) ([]byte, string, ScriptMetadata, error) {
 	fmt.Printf("Downloading script from %s...\n", url)
 
 	// Create HTTP client with timeout
@@ -23,26 +71,29 @@ func DownloadScript(url string) ([]byte, string, error) {
 	// Download the script
 	resp, err := client.Get(url)
 	if err != nil {
-		return nil, "", fmt.Errorf("failed to download script: %v", err)
+		return nil, "", ScriptMetadata{}, fmt.Errorf("failed to download script: %v", err)
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return nil, "", fmt.Errorf("HTTP error: %s", resp.Status)
+		return nil, "", ScriptMetadata{}, fmt.Errorf("HTTP error: %s", resp.Status)
 	}
 
 	// Read the script content
 	content, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		return nil, "", fmt.Errorf("failed to read script content: %v", err)
+		return nil, "", ScriptMetadata{}, fmt.Errorf("failed to read script content: %v", err)
 	}
 
 	// Calculate SHA256 hash
 	hash := sha256.Sum256(content)
 	hashString := hex.EncodeToString(hash[:])
 
+	// Parse metadata from script content
+	metadata := ParseMetadata(content)
+
 	fmt.Printf("Script downloaded successfully (%d bytes)\n", len(content))
-	return content, hashString, nil
+	return content, hashString, metadata, nil
 }
 
 // ExecuteScript executes the downloaded script content

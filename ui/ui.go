@@ -10,6 +10,14 @@ import (
 	"nagini/config"
 )
 
+// ScriptMetadata holds script metadata information
+type ScriptMetadata struct {
+	NaGINIVersion   string
+	Author          string
+	TemplateVersion string
+	Info            string
+}
+
 // ConfirmWithUser asks user to confirm the detected values
 func ConfirmWithUser(info config.SystemInfo) bool {
 	fmt.Printf("\n=== Arch Linux Auto Setup ===\n")
@@ -115,10 +123,35 @@ func ShowStartAutoInstallation() {
 
 // ShowVersion displays application version with banner
 func ShowVersion(version string) {
-	fmt.Printf("===============================\n")
-	fmt.Printf("       naGINI v%s\n", version)
-	fmt.Printf("  Arch Linux Auto Installer\n")
-	fmt.Printf("===============================\n\n")
+	fmt.Printf("=============================================================================================\n")
+	fmt.Printf(" naGINI v%s\n", version)
+	fmt.Printf(" Arch Linux Webbased Installer\n")
+	fmt.Printf(" Feedback and Security Issues here: https://github.com/mrwiora/naGINI/issues\n")
+	fmt.Printf("=============================================================================================\n\n")
+}
+
+// ShowScriptMetadata displays script metadata information
+func ShowScriptMetadata(metadata ScriptMetadata) {
+	// Only show metadata section if any metadata exists
+	if metadata.NaGINIVersion == "" && metadata.Author == "" &&
+		metadata.TemplateVersion == "" && metadata.Info == "" {
+		return
+	}
+
+	fmt.Printf("=== Script Information ===\n")
+	if metadata.NaGINIVersion != "" {
+		fmt.Printf("Compatible naGINI Version: %s\n", metadata.NaGINIVersion)
+	}
+	if metadata.Author != "" {
+		fmt.Printf("Script Author: %s\n", metadata.Author)
+	}
+	if metadata.TemplateVersion != "" {
+		fmt.Printf("Template Version: %s\n", metadata.TemplateVersion)
+	}
+	if metadata.Info != "" {
+		fmt.Printf("Description: %s\n", metadata.Info)
+	}
+	fmt.Printf("==============================\n\n")
 }
 
 // ShowCompletion displays final success message

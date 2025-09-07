@@ -146,12 +146,20 @@ func main() {
 	scriptURL := cfg.GetScriptURLWithID(scriptID)
 	fmt.Printf("\nScript URL: %s\n", scriptURL)
 
-	// Download the script and get its hash
-	scriptContent, scriptHash, err := script.DownloadScript(scriptURL)
+	// Download the script and get its hash and metadata
+	scriptContent, scriptHash, scriptMetadata, err := script.DownloadScript(scriptURL)
 	if err != nil {
 		fmt.Printf("Error downloading script: %v\n", err)
 		os.Exit(1)
 	}
+
+	// Show script metadata to user
+	ui.ShowScriptMetadata(ui.ScriptMetadata{
+		NaGINIVersion:   scriptMetadata.NaGINIVersion,
+		Author:          scriptMetadata.Author,
+		TemplateVersion: scriptMetadata.TemplateVersion,
+		Info:            scriptMetadata.Info,
+	})
 
 	// Show all exported variables before script execution
 	ui.ShowConfigurationSummary(info, password, scriptHash)
