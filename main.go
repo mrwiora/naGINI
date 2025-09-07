@@ -24,6 +24,9 @@ func main() {
 	// Show base URL being used
 	ui.ShowBaseURL(cfg.BaseURL)
 
+	// Show mode information
+	ui.ShowModeInfo(cfg.IsAutoMode())
+
 	// Handle version flag (just exit after showing version)
 	if cfg.ShowVersion {
 		os.Exit(0)
@@ -40,9 +43,17 @@ func main() {
 	var autoMode bool
 
 	// Check if all required parameters are provided for auto mode
+	// Show system detection section
+	ui.ShowSystemDetectionSection()
+
 	if cfg.IsAutoMode() {
 		autoMode = true
-		ui.ShowAutoModeInfo(config.SystemInfo{}, cfg.ScriptName, cfg.BaseURL)
+
+		// Show provided parameters
+		ui.ShowAutoModeParameters(config.SystemInfo{
+			Disk:      cfg.Disk,
+			Interface: cfg.Interface,
+		}, cfg.ScriptName, cfg.BaseURL)
 
 		// Resolve system info for auto mode
 		var err error
@@ -52,12 +63,7 @@ func main() {
 			os.Exit(1)
 		}
 		scriptID = cfg.ScriptName
-
-		ui.ShowAutoModeInfo(info, scriptID, cfg.BaseURL)
 	} else {
-		// Interactive mode
-		ui.ShowInteractiveModeInfo()
-
 		// Resolve system info interactively
 		var err error
 		info, err = ui.ResolveSystemInfoInteractive(cfg.Disk, cfg.Interface)

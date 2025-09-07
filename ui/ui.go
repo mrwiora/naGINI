@@ -83,19 +83,18 @@ func ConfirmExecution() bool {
 	return input == "y" || input == "yes"
 }
 
-// ShowAutoModeInfo displays information for automatic mode
-func ShowAutoModeInfo(info config.SystemInfo, scriptID, baseURL string) {
-	fmt.Printf("%s=== Automatic Installation Mode ===%s\n", Yellow, Reset)
+// ShowSystemDetectionSection displays the system detection section header
+func ShowSystemDetectionSection() {
+	fmt.Printf("%s=== Detecting System Information ===%s\n", Blue, Reset)
+}
+
+// ShowAutoModeParameters displays provided parameters for automatic mode
+func ShowAutoModeParameters(info config.SystemInfo, scriptID, baseURL string) {
 	fmt.Printf("Using provided parameters:\n")
 	fmt.Printf("  DISK: %s%s%s\n", White, info.Disk, Reset)
 	fmt.Printf("  INTERFACE: %s%s%s\n", White, info.Interface, Reset)
 	fmt.Printf("  SCRIPT: %s%s%s\n", White, scriptID, Reset)
 	fmt.Printf("  Base URL: %s%s%s\n", White, baseURL, Reset)
-}
-
-// ShowInteractiveModeInfo displays information for interactive mode
-func ShowInteractiveModeInfo() {
-	fmt.Printf("%s=== Interactive Installation Mode ===%s\n", Yellow, Reset)
 }
 
 // ShowConfigurationSummary displays all configuration before execution
@@ -157,7 +156,16 @@ func ShowScriptMetadata(metadata ScriptMetadata) {
 
 // ShowBaseURL displays which base URL is being used
 func ShowBaseURL(baseURL string) {
-	fmt.Printf("Using base URL: %s%s%s\n\n", Cyan, baseURL, Reset)
+	fmt.Printf("Using base URL: %s%s%s\n", Cyan, baseURL, Reset)
+}
+
+// ShowModeInfo displays whether running in interactive or automated mode
+func ShowModeInfo(isAutoMode bool) {
+	if isAutoMode {
+		fmt.Printf("Mode: %sAutomated Installation%s\n\n", Green, Reset)
+	} else {
+		fmt.Printf("Mode: %sInteractive Installation%s\n\n", Yellow, Reset)
+	}
 }
 
 // ResolveDiskInteractive handles interactive disk resolution with UI feedback
