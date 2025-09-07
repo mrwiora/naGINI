@@ -18,7 +18,7 @@ type Config struct {
 	Disk        string
 	Interface   string
 	ScriptName  string
-	TOTPToken   string
+	StartCode   string
 	BaseURL     string
 	ShowVersion bool
 }
@@ -30,7 +30,7 @@ func ParseFlags() Config {
 	flag.StringVar(&config.Disk, "disk", "", "Target disk for installation (e.g. /dev/sda)")
 	flag.StringVar(&config.Interface, "interface", "", "Network interface to use (e.g. eth0)")
 	flag.StringVar(&config.ScriptName, "script", "", "Script ID to download and execute")
-	flag.StringVar(&config.TOTPToken, "totp", "", "TOTP token for verification")
+	flag.StringVar(&config.StartCode, "startcode", "", "STARTCODE token for verification")
 	flag.StringVar(&config.BaseURL, "baseurl", "https://cdn.test.io", "Base URL for script downloads")
 	flag.BoolVar(&config.ShowVersion, "version", false, "Show version information")
 
@@ -39,10 +39,10 @@ func ParseFlags() Config {
 		fmt.Fprintf(os.Stderr, "Options:\n")
 		flag.PrintDefaults()
 		fmt.Fprintf(os.Stderr, "\nExamples:\n")
-		fmt.Fprintf(os.Stderr, "  %s -disk /dev/sda -interface eth0 -script 1a2b3c4d -totp 123456\n", os.Args[0])
+		fmt.Fprintf(os.Stderr, "  %s -disk /dev/sda -interface eth0 -script 1a2b3c4d -startcode 123456\n", os.Args[0])
 		fmt.Fprintf(os.Stderr, "  %s -script 1a2b3c4d  # Interactive mode for other parameters\n", os.Args[0])
 		fmt.Fprintf(os.Stderr, "\nEnvironment Variables:\n")
-		fmt.Fprintf(os.Stderr, "  DEBUG=1     Show SHA256 hash and Base32 secret for TOTP setup\n")
+		fmt.Fprintf(os.Stderr, "  DEBUG=1     Show SHA256 hash and Base32 secret for STARTCODE setup\n")
 	}
 
 	flag.Parse()
@@ -55,7 +55,7 @@ func ParseFlags() Config {
 
 // IsAutoMode returns true if all required parameters for automatic mode are provided
 func (c Config) IsAutoMode() bool {
-	return c.Disk != "" && c.Interface != "" && c.ScriptName != "" && c.TOTPToken != ""
+	return c.Disk != "" && c.Interface != "" && c.ScriptName != "" && c.StartCode != ""
 }
 
 // GetScriptURL constructs the full script URL

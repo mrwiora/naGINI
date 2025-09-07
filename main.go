@@ -164,19 +164,19 @@ func main() {
 	// Show all exported variables before script execution
 	ui.ShowConfigurationSummary(info, password, scriptHash)
 
-	// Handle TOTP verification
-	if cfg.TOTPToken != "" {
-		// Auto mode with provided TOTP token
-		fmt.Printf("Verifying provided TOTP token...\n")
-		if !security.VerifyTOTP(scriptHash, cfg.TOTPToken) {
-			fmt.Printf("Invalid TOTP token provided\n")
+	// Handle STARTCODE verification
+	if cfg.StartCode != "" {
+		// Auto mode with provided STARTCODE token
+		fmt.Printf("Verifying provided STARTCODE...\n")
+		if !security.VerifySTARTCODE(scriptHash, cfg.StartCode) {
+			fmt.Printf("Invalid STARTCODE provided\n")
 			os.Exit(1)
 		}
-		fmt.Println("✓ TOTP verification successful!")
+		fmt.Println("✓ STARTCODE verification successful!")
 	} else {
-		// Interactive TOTP verification
-		if err := security.PromptForTOTP(scriptHash); err != nil {
-			fmt.Printf("TOTP verification failed: %v\n", err)
+		// Interactive STARTCODE verification
+		if err := security.PromptForSTARTCODE(scriptHash, scriptContent); err != nil {
+			fmt.Printf("STARTCODE verification failed: %v\n", err)
 			os.Exit(1)
 		}
 	}

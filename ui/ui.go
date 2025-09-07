@@ -69,7 +69,7 @@ func GetPassword(scriptID string) string {
 
 // ConfirmExecution asks user to confirm script execution
 func ConfirmExecution() bool {
-	fmt.Print("\nTOTP verified. Do you want to proceed with executing this script? (y/N): ")
+	fmt.Print("\nSTARTCODE verified. Do you want to proceed with executing this script? (y/N): ")
 
 	reader := bufio.NewReader(os.Stdin)
 	input, err := reader.ReadString('\n')
