@@ -113,6 +113,14 @@ func ShowStartAutoInstallation() {
 	fmt.Println("\nAll parameters verified. Starting automatic installation...")
 }
 
+// ShowVersion displays application version with banner
+func ShowVersion(version string) {
+	fmt.Printf("===============================\n")
+	fmt.Printf("       naGINI v%s\n", version)
+	fmt.Printf("  Arch Linux Auto Installer\n")
+	fmt.Printf("===============================\n\n")
+}
+
 // ShowCompletion displays final success message
 func ShowCompletion() {
 	fmt.Println("\nArch Linux auto setup completed successfully!")

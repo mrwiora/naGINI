@@ -12,15 +12,26 @@ import (
 	"nagini/ui"
 )
 
+// VERSION is set via ldflags during build
+var VERSION = "dev"
+
 func main() {
+	// Always show version at startup
+	ui.ShowVersion(VERSION)
+
+	// Parse command line flags first
+	cfg := config.ParseFlags()
+
+	// Handle version flag (just exit after showing version)
+	if cfg.ShowVersion {
+		os.Exit(0)
+	}
+
 	// Check if running as root
 	if os.Geteuid() != 0 {
 		fmt.Println("This program must be run as root")
 		os.Exit(1)
 	}
-
-	// Parse command line flags
-	cfg := config.ParseFlags()
 
 	var info config.SystemInfo
 	var scriptID string

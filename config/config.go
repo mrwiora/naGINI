@@ -15,11 +15,12 @@ type SystemInfo struct {
 
 // Config holds all configuration parameters
 type Config struct {
-	Disk       string
-	Interface  string
-	ScriptName string
-	TOTPToken  string
-	BaseURL    string
+	Disk        string
+	Interface   string
+	ScriptName  string
+	TOTPToken   string
+	BaseURL     string
+	ShowVersion bool
 }
 
 // ParseFlags parses command line arguments and returns configuration
@@ -31,6 +32,7 @@ func ParseFlags() Config {
 	flag.StringVar(&config.ScriptName, "script", "", "Script ID to download and execute")
 	flag.StringVar(&config.TOTPToken, "totp", "", "TOTP token for verification")
 	flag.StringVar(&config.BaseURL, "baseurl", "https://cdn.test.io", "Base URL for script downloads")
+	flag.BoolVar(&config.ShowVersion, "version", false, "Show version information")
 
 	flag.Usage = func() {
 		fmt.Fprintf(os.Stderr, "Usage: %s [options]\n\n", os.Args[0])
