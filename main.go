@@ -22,6 +22,9 @@ func main() {
 	// Parse command line flags first
 	cfg := config.ParseFlags()
 
+	// Show base URL being used
+	ui.ShowBaseURL(cfg.BaseURL)
+
 	// Handle version flag (just exit after showing version)
 	if cfg.ShowVersion {
 		os.Exit(0)
@@ -29,7 +32,7 @@ func main() {
 
 	// Check if running as root
 	if os.Geteuid() != 0 {
-		fmt.Println("This program must be run as root")
+		fmt.Printf("%sThis program must be run as root%s\n", ui.Red, ui.Reset)
 		os.Exit(1)
 	}
 
@@ -44,12 +47,12 @@ func main() {
 
 		// Validate provided parameters
 		if err := system.ValidateDisk(cfg.Disk); err != nil {
-			fmt.Printf("Invalid disk parameter: %v\n", err)
+			fmt.Printf("%sInvalid disk parameter: %v%s\n", ui.Red, err, ui.Reset)
 			os.Exit(1)
 		}
 
 		if err := system.ValidateInterface(cfg.Interface); err != nil {
-			fmt.Printf("Invalid interface parameter: %v\n", err)
+			fmt.Printf("%sInvalid interface parameter: %v%s\n", ui.Red, err, ui.Reset)
 			os.Exit(1)
 		}
 
@@ -70,7 +73,7 @@ func main() {
 
 		if cfg.Disk != "" {
 			if err := system.ValidateDisk(cfg.Disk); err != nil {
-				fmt.Printf("Invalid disk parameter: %v\n", err)
+				fmt.Printf("%sInvalid disk parameter: %v%s\n", ui.Red, err, ui.Reset)
 				os.Exit(1)
 			}
 			disk = cfg.Disk
@@ -79,14 +82,14 @@ func main() {
 			ui.ShowDetectionMessage("primary disk")
 			disk, err = system.DetectDisk()
 			if err != nil {
-				fmt.Printf("Error detecting disk: %v\n", err)
+				fmt.Printf("%sError detecting disk: %v%s\n", ui.Red, err, ui.Reset)
 				os.Exit(1)
 			}
 		}
 
 		if cfg.Interface != "" {
 			if err := system.ValidateInterface(cfg.Interface); err != nil {
-				fmt.Printf("Invalid interface parameter: %v\n", err)
+				fmt.Printf("%sInvalid interface parameter: %v%s\n", ui.Red, err, ui.Reset)
 				os.Exit(1)
 			}
 			iface = cfg.Interface
@@ -95,7 +98,7 @@ func main() {
 			ui.ShowDetectionMessage("network interface")
 			iface, err = system.DetectInterface()
 			if err != nil {
-				fmt.Printf("Error detecting network interface: %v\n", err)
+				fmt.Printf("%sError detecting network interface: %v%s\n", ui.Red, err, ui.Reset)
 				os.Exit(1)
 			}
 		}
@@ -107,7 +110,7 @@ func main() {
 
 		// Confirm with user unless all parameters are provided
 		if !ui.ConfirmWithUser(info) {
-			fmt.Println("Setup cancelled by user")
+			fmt.Printf("%sSetup cancelled by user%s\n", ui.Yellow, ui.Reset)
 			os.Exit(1)
 		}
 	}
@@ -118,7 +121,7 @@ func main() {
 
 	// Run dhcpcd
 	if err := network.RunDHCPCD(info.Interface); err != nil {
-		fmt.Printf("Error starting DHCP: %v\n", err)
+		fmt.Printf("%sError starting DHCP: %v%s\n", ui.Red, err, ui.Reset)
 		os.Exit(1)
 	}
 
@@ -129,7 +132,7 @@ func main() {
 		var err error
 		scriptID, err = ui.GetScriptID()
 		if err != nil {
-			fmt.Printf("Error getting script ID: %v\n", err)
+			fmt.Printf("%sError getting script ID: %v%s\n", ui.Red, err, ui.Reset)
 			os.Exit(1)
 		}
 		// Update config with user-provided script ID
@@ -144,12 +147,12 @@ func main() {
 
 	// Construct script URL
 	scriptURL := cfg.GetScriptURLWithID(scriptID)
-	fmt.Printf("\nScript URL: %s\n", scriptURL)
+	fmt.Printf("\nScript URL: %s%s%s\n", ui.Cyan, scriptURL, ui.Reset)
 
 	// Download the script and get its hash and metadata
 	scriptContent, scriptHash, scriptMetadata, err := script.DownloadScript(scriptURL)
 	if err != nil {
-		fmt.Printf("Error downloading script: %v\n", err)
+		fmt.Printf("%sError downloading script: %v%s\n", ui.Red, err, ui.Reset)
 		os.Exit(1)
 	}
 
@@ -167,16 +170,16 @@ func main() {
 	// Handle STARTCODE verification
 	if cfg.StartCode != "" {
 		// Auto mode with provided STARTCODE token
-		fmt.Printf("Verifying provided STARTCODE...\n")
+		fmt.Printf("%sVerifying provided STARTCODE...%s\n", ui.Yellow, ui.Reset)
 		if !security.VerifySTARTCODE(scriptHash, cfg.StartCode) {
-			fmt.Printf("Invalid STARTCODE provided\n")
+			fmt.Printf("%sInvalid STARTCODE provided%s\n", ui.Red, ui.Reset)
 			os.Exit(1)
 		}
-		fmt.Println("✓ STARTCODE verification successful!")
+		fmt.Printf("%s✓ STARTCODE verification successful!%s\n", ui.Green, ui.Reset)
 	} else {
 		// Interactive STARTCODE verification
 		if err := security.PromptForSTARTCODE(scriptHash, scriptContent); err != nil {
-			fmt.Printf("STARTCODE verification failed: %v\n", err)
+			fmt.Printf("%sSTARTCODE verification failed: %v%s\n", ui.Red, err, ui.Reset)
 			os.Exit(1)
 		}
 	}
@@ -184,7 +187,7 @@ func main() {
 	// Final confirmation in interactive mode
 	if !autoMode {
 		if !ui.ConfirmExecution() {
-			fmt.Println("Script execution cancelled by user")
+			fmt.Printf("%sScript execution cancelled by user%s\n", ui.Yellow, ui.Reset)
 			os.Exit(1)
 		}
 	} else {
@@ -193,7 +196,7 @@ func main() {
 
 	// Execute the script
 	if err := script.ExecuteScript(scriptContent, info.Disk, info.Interface, password); err != nil {
-		fmt.Printf("Error executing script: %v\n", err)
+		fmt.Printf("%sError executing script: %v%s\n", ui.Red, err, ui.Reset)
 		os.Exit(1)
 	}
 

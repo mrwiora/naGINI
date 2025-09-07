@@ -20,9 +20,9 @@ type ScriptMetadata struct {
 
 // ConfirmWithUser asks user to confirm the detected values
 func ConfirmWithUser(info config.SystemInfo) bool {
-	fmt.Printf("\n=== Arch Linux Auto Setup ===\n")
-	fmt.Printf("Detected DISK: %s\n", info.Disk)
-	fmt.Printf("Detected INTERFACE: %s\n", info.Interface)
+	fmt.Printf("\n%s=== Arch Linux Auto Setup ===%s\n", Blue, Reset)
+	fmt.Printf("Detected DISK: %s%s%s\n", White, info.Disk, Reset)
+	fmt.Printf("Detected INTERFACE: %s%s%s\n", White, info.Interface, Reset)
 	fmt.Print("\nAre these values correct? (y/N): ")
 
 	reader := bufio.NewReader(os.Stdin)
@@ -84,50 +84,50 @@ func ConfirmExecution() bool {
 
 // ShowAutoModeInfo displays information for automatic mode
 func ShowAutoModeInfo(info config.SystemInfo, scriptID, baseURL string) {
-	fmt.Println("=== Automatic Installation Mode ===")
+	fmt.Printf("%s=== Automatic Installation Mode ===%s\n", Yellow, Reset)
 	fmt.Printf("Using provided parameters:\n")
-	fmt.Printf("  DISK: %s\n", info.Disk)
-	fmt.Printf("  INTERFACE: %s\n", info.Interface)
-	fmt.Printf("  SCRIPT: %s\n", scriptID)
-	fmt.Printf("  Base URL: %s\n", baseURL)
+	fmt.Printf("  DISK: %s%s%s\n", White, info.Disk, Reset)
+	fmt.Printf("  INTERFACE: %s%s%s\n", White, info.Interface, Reset)
+	fmt.Printf("  SCRIPT: %s%s%s\n", White, scriptID, Reset)
+	fmt.Printf("  Base URL: %s%s%s\n", White, baseURL, Reset)
 }
 
 // ShowInteractiveModeInfo displays information for interactive mode
 func ShowInteractiveModeInfo() {
-	fmt.Println("=== Interactive Installation Mode ===")
+	fmt.Printf("%s=== Interactive Installation Mode ===%s\n", Yellow, Reset)
 }
 
 // ShowConfigurationSummary displays all configuration before execution
 func ShowConfigurationSummary(info config.SystemInfo, password, scriptHash string) {
-	fmt.Printf("=== Configuration Summary ===\n")
-	fmt.Printf("DISK=%s\n", info.Disk)
-	fmt.Printf("INTERFACE=%s\n", info.Interface)
-	fmt.Printf("PASSWORD=%s\n", password)
-	fmt.Printf("Script SHA256: %s\n", scriptHash)
+	fmt.Printf("%s=== Configuration Summary ===%s\n", Blue, Reset)
+	fmt.Printf("DISK=%s%s%s\n", White, info.Disk, Reset)
+	fmt.Printf("INTERFACE=%s%s%s\n", White, info.Interface, Reset)
+	fmt.Printf("PASSWORD=%s%s%s\n", White, password, Reset)
+	fmt.Printf("Script SHA256: %s%s%s\n", White, scriptHash, Reset)
 }
 
 // ShowProvidedParameter displays when a parameter is provided via command line
 func ShowProvidedParameter(paramType, value string) {
-	fmt.Printf("Using provided %s: %s\n", paramType, value)
+	fmt.Printf("Using provided %s: %s%s%s\n", paramType, White, value, Reset)
 }
 
 // ShowDetectionMessage displays detection messages
 func ShowDetectionMessage(what string) {
-	fmt.Printf("\nDetecting %s...\n", what)
+	fmt.Printf("\n%sDetecting %s...%s\n", Yellow, what, Reset)
 }
 
 // ShowStartAutoInstallation displays message when starting automatic installation
 func ShowStartAutoInstallation() {
-	fmt.Println("\nAll parameters verified. Starting automatic installation...")
+	fmt.Printf("\n%sAll parameters verified. Starting automatic installation...%s\n", Green, Reset)
 }
 
 // ShowVersion displays application version with banner
 func ShowVersion(version string) {
-	fmt.Printf("=============================================================================================\n")
-	fmt.Printf(" naGINI v%s\n", version)
-	fmt.Printf(" Arch Linux Webbased Installer\n")
-	fmt.Printf(" Feedback and Security Issues here: https://github.com/mrwiora/naGINI/issues\n")
-	fmt.Printf("=============================================================================================\n\n")
+	fmt.Printf("%s=============================================================================================%s\n", Blue, Reset)
+	fmt.Printf("%s naGINI v%s%s%s\n", Blue, White, version, Reset)
+	fmt.Printf("%s Arch Linux Webbased Installer%s\n", Blue, Reset)
+	fmt.Printf("%s Feedback and Security Issues here: %shttps://github.com/mrwiora/naGINI/issues%s\n", Blue, Cyan, Reset)
+	fmt.Printf("%s=============================================================================================%s\n\n", Blue, Reset)
 }
 
 // ShowScriptMetadata displays script metadata information
@@ -138,23 +138,28 @@ func ShowScriptMetadata(metadata ScriptMetadata) {
 		return
 	}
 
-	fmt.Printf("=== Script Information ===\n")
+	fmt.Printf("%s=== Script Information ===%s\n", Green, Reset)
 	if metadata.NaGINIVersion != "" {
-		fmt.Printf("Compatible naGINI Version: %s\n", metadata.NaGINIVersion)
+		fmt.Printf("%sCompatible naGINI Version: %s%s\n", Green, metadata.NaGINIVersion, Reset)
 	}
 	if metadata.Author != "" {
-		fmt.Printf("Script Author: %s\n", metadata.Author)
+		fmt.Printf("%sScript Author: %s%s\n", Green, metadata.Author, Reset)
 	}
 	if metadata.TemplateVersion != "" {
-		fmt.Printf("Template Version: %s\n", metadata.TemplateVersion)
+		fmt.Printf("%sTemplate Version: %s%s\n", Green, metadata.TemplateVersion, Reset)
 	}
 	if metadata.Info != "" {
-		fmt.Printf("Description: %s\n", metadata.Info)
+		fmt.Printf("%sDescription: %s%s\n", Green, metadata.Info, Reset)
 	}
-	fmt.Printf("==============================\n\n")
+	fmt.Printf("%s==============================%s\n\n", Green, Reset)
+}
+
+// ShowBaseURL displays which base URL is being used
+func ShowBaseURL(baseURL string) {
+	fmt.Printf("Using base URL: %s%s%s\n\n", Cyan, baseURL, Reset)
 }
 
 // ShowCompletion displays final success message
 func ShowCompletion() {
-	fmt.Println("\nArch Linux auto setup completed successfully!")
+	fmt.Printf("\n%sArch Linux auto setup completed successfully!%s\n", Green, Reset)
 }

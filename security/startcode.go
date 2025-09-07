@@ -11,6 +11,8 @@ import (
 	"regexp"
 	"strings"
 	"time"
+
+	"nagini/ui"
 )
 
 // SHA256ToBase32 converts a SHA256 hex string to base32 for STARTCODE generation
@@ -74,9 +76,9 @@ func VerifySTARTCODE(secret, token string) bool {
 
 // DisplayScriptContent displays the script content to the user
 func DisplayScriptContent(scriptContent []byte) {
-	fmt.Printf("\n=== Script Content ===\n")
-	fmt.Printf("%s", string(scriptContent))
-	fmt.Printf("\n=== End of Script ===\n\n")
+	fmt.Printf("\n%s=== Script Content ===%s\n", ui.Red, ui.Reset)
+	fmt.Printf("%s%s%s", ui.Red, string(scriptContent), ui.Reset)
+	fmt.Printf("\n%s=== End of Script ===%s\n\n", ui.Red, ui.Reset)
 }
 
 // PromptForSTARTCODE prompts user for STARTCODE token and verifies it
@@ -89,19 +91,19 @@ func PromptForSTARTCODE(scriptHash string, scriptContent []byte) error {
 
 	// Debug output (only shown if DEBUG environment variable is set)
 	if os.Getenv("DEBUG") != "" {
-		fmt.Printf("\n=== STARTCODE Debug Information ===\n")
-		fmt.Printf("Script SHA256: %s\n", scriptHash)
-		fmt.Printf("Base32 Secret: %s\n", base32Secret)
+		fmt.Printf("\n%s=== STARTCODE Debug Information ===%s\n", ui.Blue, ui.Reset)
+		fmt.Printf("Script SHA256: %s%s%s\n", ui.Cyan, scriptHash, ui.Reset)
+		fmt.Printf("Base32 Secret: %s%s%s\n", ui.Cyan, base32Secret, ui.Reset)
 		fmt.Printf("Add this base32 secret to your authenticator app.\n")
 		fmt.Printf("Generate a STARTCODE using your authenticator app.\n")
-		fmt.Printf("========================================\n")
+		fmt.Printf("%s========================================%s\n", ui.Blue, ui.Reset)
 	}
 
 	reader := bufio.NewReader(os.Stdin)
 
 	for {
-		fmt.Printf("\n=== STARTCODE Verification Required ===\n")
-		fmt.Printf("The script content is verified using SHA256: %s\n", scriptHash)
+		fmt.Printf("\n%s=== STARTCODE Verification Required ===%s\n", ui.Yellow, ui.Reset)
+		fmt.Printf("The script content is verified using SHA256: %s%s%s\n", ui.Cyan, scriptHash, ui.Reset)
 		fmt.Print("Enter STARTCODE (6 digits) or press ENTER to view script content: ")
 
 		input, err := reader.ReadString('\n')
@@ -119,17 +121,17 @@ func PromptForSTARTCODE(scriptHash string, scriptContent []byte) error {
 
 		// Validate token format (6 digits)
 		if !regexp.MustCompile(`^\d{6}$`).MatchString(token) {
-			fmt.Printf("STARTCODE must be exactly 6 digits. Please try again.\n")
+			fmt.Printf("%sSTARTCODE must be exactly 6 digits. Please try again.%s\n", ui.Red, ui.Reset)
 			continue
 		}
 
 		// Verify STARTCODE
 		if !VerifySTARTCODE(scriptHash, token) {
-			fmt.Printf("Invalid STARTCODE. Please try again.\n")
+			fmt.Printf("%sInvalid STARTCODE. Please try again.%s\n", ui.Red, ui.Reset)
 			continue
 		}
 
-		fmt.Println("✓ STARTCODE verification successful!")
+		fmt.Printf("%s✓ STARTCODE verification successful!%s\n", ui.Green, ui.Reset)
 		return nil
 	}
 }

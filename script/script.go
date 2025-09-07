@@ -11,6 +11,8 @@ import (
 	"os/exec"
 	"strings"
 	"time"
+
+	"nagini/ui"
 )
 
 // ScriptMetadata holds script metadata information
@@ -61,7 +63,7 @@ func ParseMetadata(scriptContent []byte) ScriptMetadata {
 
 // DownloadScript downloads the script and returns its content, SHA256 hash, and metadata
 func DownloadScript(url string) ([]byte, string, ScriptMetadata, error) {
-	fmt.Printf("Downloading script from %s...\n", url)
+	fmt.Printf("%sDownloading script from %s...%s\n", ui.Yellow, url, ui.Reset)
 
 	// Create HTTP client with timeout
 	client := &http.Client{
@@ -92,13 +94,13 @@ func DownloadScript(url string) ([]byte, string, ScriptMetadata, error) {
 	// Parse metadata from script content
 	metadata := ParseMetadata(content)
 
-	fmt.Printf("Script downloaded successfully (%d bytes)\n", len(content))
+	fmt.Printf("%sScript downloaded successfully (%d bytes)%s\n", ui.Green, len(content), ui.Reset)
 	return content, hashString, metadata, nil
 }
 
 // ExecuteScript executes the downloaded script content
 func ExecuteScript(scriptContent []byte, disk, iface, password string) error {
-	fmt.Println("Executing installation script...")
+	fmt.Printf("%sExecuting installation script...%s\n", ui.Yellow, ui.Reset)
 
 	// Create a temporary file for the script
 	tmpFile, err := ioutil.TempFile("", "arch-install-*.sh")
@@ -138,6 +140,6 @@ func ExecuteScript(scriptContent []byte, disk, iface, password string) error {
 		return fmt.Errorf("script execution failed: %v", err)
 	}
 
-	fmt.Println("Script executed successfully")
+	fmt.Printf("%sScript executed successfully%s\n", ui.Green, ui.Reset)
 	return nil
 }
