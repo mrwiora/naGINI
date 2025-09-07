@@ -31,7 +31,7 @@ func ParseFlags() Config {
 	flag.StringVar(&config.Interface, "interface", "", "Network interface to use (e.g. eth0)")
 	flag.StringVar(&config.ScriptName, "script", "", "Script ID to download and execute")
 	flag.StringVar(&config.StartCode, "startcode", "", "STARTCODE token for verification")
-	flag.StringVar(&config.BaseURL, "baseurl", "https://cdn.wiora.io", "Base URL for script downloads")
+	flag.StringVar(&config.BaseURL, "baseurl", "https://cdn.test.io", "Base URL for script downloads")
 	flag.BoolVar(&config.ShowVersion, "version", false, "Show version information")
 
 	flag.Usage = func() {
@@ -42,7 +42,8 @@ func ParseFlags() Config {
 		fmt.Fprintf(os.Stderr, "  %s -disk /dev/sda -interface eth0 -script 1a2b3c4d -startcode 123456\n", os.Args[0])
 		fmt.Fprintf(os.Stderr, "  %s -script 1234affe  # Interactive mode for other parameters\n", os.Args[0])
 		fmt.Fprintf(os.Stderr, "\nEnvironment Variables:\n")
-		fmt.Fprintf(os.Stderr, "  DEBUG=1     Show SHA256 hash and Base32 secret for STARTCODE setup\n")
+		fmt.Fprintf(os.Stderr, "  DEBUG=1                Show SHA256 hash and Base32 secret for STARTCODE setup\n")
+		fmt.Fprintf(os.Stderr, "  NAGINI_TRUSTED_SERVER  Trusted base URL that bypasses security warnings\n")
 	}
 
 	flag.Parse()
@@ -70,5 +71,21 @@ func (c Config) GetScriptURLWithID(scriptID string) string {
 
 // IsCustomBaseURL returns true if the base URL is different from the default
 func (c Config) IsCustomBaseURL() bool {
-	return c.BaseURL != "https://cdn.wiora.io"
+	return c.BaseURL != "https://cdn.test.io"
+}
+
+// IsTrustedBaseURL returns true if the base URL is trusted via NAGINI_TRUSTED_SERVER
+func (c Config) IsTrustedBaseURL() bool {
+	trustedServer := os.Getenv("NAGINI_TRUSTED_SERVER")
+	// If environment variable is empty, no baseurl is trusted
+	if trustedServer == "" {
+		return false
+	}
+	// Check if the current base URL matches the trusted server
+	return c.BaseURL == trustedServer
+}
+
+// RequiresSecurityAcknowledgment returns true if custom baseurl requires user acknowledgment
+func (c Config) RequiresSecurityAcknowledgment() bool {
+	return c.IsCustomBaseURL() && !c.IsTrustedBaseURL()
 }

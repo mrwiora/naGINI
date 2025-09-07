@@ -297,9 +297,10 @@ func ShowScriptContent(scriptContent []byte) {
 // ShowCustomBaseURLWarning displays warning about custom base URL
 func ShowCustomBaseURLWarning(baseURL string) {
 	fmt.Printf("\n%s=== SECURITY WARNING ===%s\n", Red, Reset)
-	fmt.Printf("%s⚠️  CUSTOM BASE URL DETECTED ⚠️%s\n", Red, Reset)
+	fmt.Printf("%s⚠️  UNTRUSTED CUSTOM BASE URL DETECTED ⚠️%s\n", Red, Reset)
 	fmt.Printf("%sYou are using a custom base URL: %s%s%s\n", Red, Yellow, baseURL, Reset)
 	fmt.Printf("%sbaseurl is custom, so the server might be manipulated and showing something else, then the produced script contains.%s\n", Red, Reset)
+	fmt.Printf("%sTo trust this server automatically, set: NAGINI_TRUSTED_SERVER=%s%s\n", Yellow, baseURL, Reset)
 	fmt.Printf("%s========================%s\n\n", Red, Reset)
 }
 

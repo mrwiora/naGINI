@@ -154,19 +154,21 @@ func main() {
 	ui.ShowScriptContent(scriptContent)
 
 	// Check for custom base URL and show warning if needed
-	if cfg.IsCustomBaseURL() {
+	if cfg.RequiresSecurityAcknowledgment() {
 		ui.ShowCustomBaseURLWarning(cfg.BaseURL)
 
-		// In automated mode, we still need acknowledgment for custom base URL
+		// In automated mode, we still need acknowledgment for untrusted custom base URL
 		if autoMode {
-			fmt.Printf("%sCustom base URL detected in automated mode. Manual confirmation required.%s\n", ui.Yellow, ui.Reset)
+			fmt.Printf("%sUntrusted custom base URL detected in automated mode. Manual confirmation required.%s\n", ui.Yellow, ui.Reset)
 		}
 
-		// Always require manual acknowledgment for custom base URL
+		// Always require manual acknowledgment for untrusted custom base URL
 		if !ui.ConfirmCustomBaseURLAcknowledgment() {
 			fmt.Printf("%sCustom base URL not acknowledged. Exiting for security reasons.%s\n", ui.Red, ui.Reset)
 			os.Exit(1)
 		}
+	} else if cfg.IsCustomBaseURL() && cfg.IsTrustedBaseURL() {
+		fmt.Printf("%sUsing trusted custom base URL: %s%s%s\n", ui.Green, ui.Cyan, cfg.BaseURL, ui.Reset)
 	}
 
 	// Script verification section
