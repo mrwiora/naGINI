@@ -38,6 +38,19 @@ func main() {
 		os.Exit(1)
 	}
 
+	// Check if running on Arch installation medium
+	hostname, err := os.Hostname()
+	if err != nil {
+		fmt.Printf("%sError checking hostname: %v%s\n", ui.Red, err, ui.Reset)
+		os.Exit(1)
+	}
+	if hostname != "archiso" {
+		fmt.Printf("%sThis program must be run on the Arch Linux installation medium (archiso)%s\n", ui.Red, ui.Reset)
+		fmt.Printf("%sCurrent hostname: %s%s%s\n", ui.Yellow, ui.White, hostname, ui.Reset)
+		fmt.Printf("%sPlease boot from the official Arch Linux ISO%s\n", ui.Yellow, ui.Reset)
+		os.Exit(1)
+	}
+
 	var info config.SystemInfo
 	var scriptID string
 	var autoMode bool
