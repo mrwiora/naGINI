@@ -123,8 +123,8 @@ func ExecuteScript(scriptContent []byte, disk, iface, password string) error {
 	// Close the file before executing
 	tmpFile.Close()
 
-	// Execute the script with bash
-	cmd := exec.Command("bash", tmpFile.Name())
+	// Execute the script with bash -e (exit on first error)
+	cmd := exec.Command("bash", "-e", tmpFile.Name())
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	cmd.Stdin = os.Stdin
