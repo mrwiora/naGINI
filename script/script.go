@@ -2,9 +2,11 @@ package script
 
 import (
 	"bufio"
+	"bytes"
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"net/http"
 	"os"
@@ -125,8 +127,11 @@ func ExecuteScript(scriptContent []byte, disk, iface, password string) error {
 
 	// Execute the script with bash -e (exit on first error)
 	cmd := exec.Command("bash", "-e", tmpFile.Name())
+
+	// Capture stderr while still showing stdout in real-time
+	var stderrBuf bytes.Buffer
 	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
+	cmd.Stderr = io.MultiWriter(os.Stderr, &stderrBuf)
 	cmd.Stdin = os.Stdin
 
 	// Set environment variables for the script
@@ -137,6 +142,9 @@ func ExecuteScript(scriptContent []byte, disk, iface, password string) error {
 	)
 
 	if err := cmd.Run(); err != nil {
+		if stderrBuf.Len() > 0 {
+			return fmt.Errorf("script execution failed: %v\nError output:\n%s", err, stderrBuf.String())
+		}
 		return fmt.Errorf("script execution failed: %v", err)
 	}
 
