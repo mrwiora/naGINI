@@ -4,7 +4,9 @@ import (
 	"bufio"
 	"fmt"
 	"os"
+	"os/exec"
 	"regexp"
+	"strconv"
 	"strings"
 	"time"
 
@@ -281,17 +283,93 @@ func ShowCompletion() {
 }
 
 // ShowScriptContent displays script content with line numbers for review
+// Clears the screen and provides a pager-like interface for scrolling through large scripts
 func ShowScriptContent(scriptContent []byte) {
-	fmt.Printf("%s=== SCRIPT CONTENT ===%s\n", Yellow, Reset)
-	fmt.Printf("%sThe following script will be executed:%s\n\n", Yellow, Reset)
+	// Clear the screen
+	fmt.Print("\033[H\033[2J")
 
-	// Display script content with line numbers for easier review
+	fmt.Printf("%s=== SCRIPT CONTENT ===%s\n", Yellow, Reset)
+	fmt.Printf("%sThe following script will be executed:%s\n", Yellow, Reset)
+	fmt.Printf("%sPress ENTER to scroll, 'q' to finish reviewing%s\n\n", Cyan, Reset)
+
+	// Prepare script content with line numbers
 	lines := strings.Split(string(scriptContent), "\n")
+	numberedLines := make([]string, len(lines))
 	for i, line := range lines {
-		fmt.Printf("%s%3d:%s %s\n", Cyan, i+1, Reset, line)
+		numberedLines[i] = fmt.Sprintf("%s%3d:%s %s", Cyan, i+1, Reset, line)
 	}
 
-	fmt.Printf("\n%s==============================%s\n", Yellow, Reset)
+	// Get terminal height (default to 24 if we can't detect)
+	terminalHeight := getTerminalHeight()
+	linesPerPage := terminalHeight - 4 // Reserve space for header and prompt
+
+	reader := bufio.NewReader(os.Stdin)
+	currentLine := 0
+	totalLines := len(numberedLines)
+
+	for currentLine < totalLines {
+		// Clear screen for each page
+		fmt.Print("\033[H\033[2J")
+
+		// Show header
+		fmt.Printf("%s=== SCRIPT CONTENT ===%s\n", Yellow, Reset)
+		fmt.Printf("%sLines %d-%d of %d%s\n\n", Cyan, currentLine+1, min(currentLine+linesPerPage, totalLines), totalLines, Reset)
+
+		// Display current page
+		endLine := min(currentLine+linesPerPage, totalLines)
+		for i := currentLine; i < endLine; i++ {
+			fmt.Println(numberedLines[i])
+		}
+
+		// Show navigation prompt
+		if endLine < totalLines {
+			fmt.Printf("\n%sPress ENTER for more, 'q' to finish reviewing: %s", Yellow, Reset)
+			input, err := reader.ReadString('\n')
+			if err != nil {
+				break
+			}
+			input = strings.TrimSpace(strings.ToLower(input))
+			if input == "q" || input == "quit" {
+				break
+			}
+			currentLine = endLine
+		} else {
+			// Last page
+			fmt.Printf("\n%s=== END OF SCRIPT ===%s\n", Yellow, Reset)
+			fmt.Printf("%sPress ENTER to continue: %s", Green, Reset)
+			reader.ReadString('\n')
+			break
+		}
+	}
+}
+
+// getTerminalHeight attempts to get the terminal height, returns default if unable
+func getTerminalHeight() int {
+	// Try to get terminal size using stty
+	cmd := exec.Command("stty", "size")
+	cmd.Stdin = os.Stdin
+	out, err := cmd.Output()
+	if err != nil {
+		return 24 // Default terminal height
+	}
+
+	dimensions := strings.Fields(string(out))
+	if len(dimensions) >= 2 {
+		height, err := strconv.Atoi(dimensions[0])
+		if err == nil && height > 0 {
+			return height
+		}
+	}
+
+	return 24 // Default terminal height
+}
+
+// min returns the minimum of two integers
+func min(a, b int) int {
+	if a < b {
+		return a
+	}
+	return b
 }
 
 // ShowCustomBaseURLWarning displays warning about custom base URL
