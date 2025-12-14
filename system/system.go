@@ -12,29 +12,49 @@ import (
 
 // DetectDisk finds the primary disk for installation
 func DetectDisk() (string, error) {
-	// Common disk patterns in order of preference
-	diskPatterns := []string{
-		"/dev/nvme0n1", // NVMe drives
-		"/dev/sda",     // SATA/SCSI drives
-		"/dev/vda",     // VirtIO drives (VMs)
-		"/dev/xvda",    // Xen virtual drives
+	// First, scan /dev for all available block devices
+	availableDisks, err := findAllBlockDevices()
+	if err != nil {
+		return "", fmt.Errorf("failed to scan for block devices: %v", err)
 	}
 
-	// Check if any of the common disks exist
-	for _, disk := range diskPatterns {
-		if _, err := os.Stat(disk); err == nil {
-			return disk, nil
+	if len(availableDisks) == 0 {
+		return "", fmt.Errorf("no suitable disk found")
+	}
+
+	// Priority order for disk types (higher priority = checked first)
+	diskPriority := []string{
+		"mmcblk", // MMC/SD card devices (e.g. Raspberry Pi, embedded systems)
+		"nvme",   // NVMe drives
+		"sd",     // SATA/SCSI drives
+		"vd",     // VirtIO drives (VMs)
+		"xvd",    // Xen virtual drives
+	}
+
+	// Select the best disk based on priority
+	for _, priority := range diskPriority {
+		for _, disk := range availableDisks {
+			if strings.HasPrefix(disk, "/dev/"+priority) {
+				return disk, nil
+			}
 		}
 	}
 
-	// If none of the common ones exist, scan /dev for block devices
+	// If no priority match, return the first available disk
+	return availableDisks[0], nil
+}
+
+// findAllBlockDevices scans /dev and returns a list of all valid block devices
+func findAllBlockDevices() ([]string, error) {
 	files, err := ioutil.ReadDir("/dev")
 	if err != nil {
-		return "", fmt.Errorf("failed to read /dev directory: %v", err)
+		return nil, fmt.Errorf("failed to read /dev directory: %v", err)
 	}
 
-	// Look for block devices that match disk patterns
-	diskRegex := regexp.MustCompile(`^(sd[a-z]|vd[a-z]|xvd[a-z]|nvme[0-9]+n[0-9]+)$`)
+	var blockDevices []string
+
+	// Look for block devices that match disk patterns (not partitions)
+	diskRegex := regexp.MustCompile(`^(sd[a-z]|vd[a-z]|xvd[a-z]|nvme[0-9]+n[0-9]+|mmcblk[0-9]+)$`)
 
 	for _, file := range files {
 		if diskRegex.MatchString(file.Name()) {
@@ -46,7 +66,7 @@ func DetectDisk() (string, error) {
 					if sysstat, ok := stat.Sys().(*syscall.Stat_t); ok {
 						// Check if it's a block device (major number > 0)
 						if (sysstat.Rdev>>8)&0xff > 0 {
-							return diskPath, nil
+							blockDevices = append(blockDevices, diskPath)
 						}
 					}
 				}
@@ -54,7 +74,7 @@ func DetectDisk() (string, error) {
 		}
 	}
 
-	return "", fmt.Errorf("no suitable disk found")
+	return blockDevices, nil
 }
 
 // DetectInterface finds the primary network interface
