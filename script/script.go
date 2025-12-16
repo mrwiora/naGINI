@@ -14,6 +14,7 @@ import (
 	"strings"
 	"time"
 
+	"nagini/system"
 	"nagini/ui"
 )
 
@@ -101,7 +102,7 @@ func DownloadScript(url string) ([]byte, string, ScriptMetadata, error) {
 }
 
 // ExecuteScript executes the downloaded script content
-func ExecuteScript(scriptContent []byte, disk, iface, password string) error {
+func ExecuteScript(scriptContent []byte, disk, iface, interfaceMac, password string) error {
 	fmt.Printf("%sExecuting installation script...%s\n", ui.Yellow, ui.Reset)
 
 	// Create a temporary file for the script
@@ -134,11 +135,17 @@ func ExecuteScript(scriptContent []byte, disk, iface, password string) error {
 	cmd.Stderr = io.MultiWriter(os.Stderr, &stderrBuf)
 	cmd.Stdin = os.Stdin
 
+	// Get partition suffixes based on disk type
+	partition1, partition2 := system.GetPartitionSuffix(disk)
+
 	// Set environment variables for the script
 	cmd.Env = append(os.Environ(),
 		fmt.Sprintf("DISK=%s", disk),
 		fmt.Sprintf("INTERFACE=%s", iface),
+		fmt.Sprintf("INTERFACEMAC=%s", interfaceMac),
 		fmt.Sprintf("PASSWORD=%s", password),
+		fmt.Sprintf("PARTITION1=%s", partition1),
+		fmt.Sprintf("PARTITION2=%s", partition2),
 	)
 
 	if err := cmd.Run(); err != nil {

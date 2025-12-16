@@ -27,6 +27,7 @@ func ConfirmWithUser(info config.SystemInfo) bool {
 	fmt.Printf("\n%s=== System Configuration Confirmation ===%s\n", Blue, Reset)
 	fmt.Printf("Detected DISK: %s%s%s\n", White, info.Disk, Reset)
 	fmt.Printf("Detected INTERFACE: %s%s%s\n", White, info.Interface, Reset)
+	fmt.Printf("Detected INTERFACE MAC: %s%s%s\n", White, info.InterfaceMac, Reset)
 	fmt.Print("\nAre these values correct? (y/N): ")
 
 	reader := bufio.NewReader(os.Stdin)
@@ -96,6 +97,7 @@ func ShowAutoModeParameters(info config.SystemInfo, scriptID, baseURL string) {
 	fmt.Printf("Using provided parameters:\n")
 	fmt.Printf("  DISK: %s%s%s\n", White, info.Disk, Reset)
 	fmt.Printf("  INTERFACE: %s%s%s\n", White, info.Interface, Reset)
+	fmt.Printf("  INTERFACE MAC: %s%s%s\n", White, info.InterfaceMac, Reset)
 	fmt.Printf("  SCRIPT: %s%s%s\n", White, scriptID, Reset)
 	fmt.Printf("  Base URL: %s%s%s\n", White, baseURL, Reset)
 }
@@ -105,6 +107,7 @@ func ShowConfigurationSummary(info config.SystemInfo, password, scriptHash strin
 	fmt.Printf("\n%s=== Configuration Summary ===%s\n", Blue, Reset)
 	fmt.Printf("DISK=%s%s%s\n", White, info.Disk, Reset)
 	fmt.Printf("INTERFACE=%s%s%s\n", White, info.Interface, Reset)
+	fmt.Printf("INTERFACEMAC=%s%s%s\n", White, info.InterfaceMac, Reset)
 	fmt.Printf("PASSWORD=%s%s%s\n", White, password, Reset)
 	fmt.Printf("Script SHA256: %s%s%s\n", White, scriptHash, Reset)
 }
@@ -225,22 +228,30 @@ func ResolveSystemInfoInteractive(providedDisk, providedInterface string) (confi
 		return config.SystemInfo{}, err
 	}
 
+	// Get MAC address for the interface
+	mac, err := system.GetInterfaceMac(iface)
+	if err != nil {
+		return config.SystemInfo{}, fmt.Errorf("failed to get MAC address: %v", err)
+	}
+
 	return config.SystemInfo{
-		Disk:      disk,
-		Interface: iface,
+		Disk:         disk,
+		Interface:    iface,
+		InterfaceMac: mac,
 	}, nil
 }
 
 // ResolveSystemInfoAuto handles auto mode system info resolution with validation
 func ResolveSystemInfoAuto(providedDisk, providedInterface string) (config.SystemInfo, error) {
-	disk, iface, err := system.ResolveSystemInfo(providedDisk, providedInterface)
+	disk, iface, mac, err := system.ResolveSystemInfo(providedDisk, providedInterface)
 	if err != nil {
 		return config.SystemInfo{}, err
 	}
 
 	return config.SystemInfo{
-		Disk:      disk,
-		Interface: iface,
+		Disk:         disk,
+		Interface:    iface,
+		InterfaceMac: mac,
 	}, nil
 }
 

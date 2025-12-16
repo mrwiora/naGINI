@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"os/exec"
 	"regexp"
 	"strings"
 	"syscall"
@@ -77,70 +78,153 @@ func findAllBlockDevices() ([]string, error) {
 	return blockDevices, nil
 }
 
-// DetectInterface finds the primary network interface
+// DetectInterface finds the primary network interface using ip link
+// Filters for UP interfaces and prefers ethernet over wifi
 func DetectInterface() (string, error) {
-	// Read network interfaces from /proc/net/dev
-	file, err := os.Open("/proc/net/dev")
+	// Execute ip link show command
+	cmd := exec.Command("ip", "link", "show")
+	output, err := cmd.Output()
 	if err != nil {
-		return "", fmt.Errorf("failed to open /proc/net/dev: %v", err)
+		return "", fmt.Errorf("failed to execute ip link: %v", err)
 	}
-	defer file.Close()
 
-	scanner := bufio.NewScanner(file)
-
-	// Skip header lines
-	scanner.Scan()
-	scanner.Scan()
-
-	// Priority order for interface types
-	var interfaces []string
 	var ethernetInterfaces []string
+	var otherInterfaces []string
 
+	scanner := bufio.NewScanner(strings.NewReader(string(output)))
 	for scanner.Scan() {
-		line := strings.TrimSpace(scanner.Text())
-		if line == "" {
+		line := scanner.Text()
+
+		// Look for interface lines (format: "2: eth0: <BROADCAST,MULTICAST,UP,LOWER_UP> ...")
+		if !strings.Contains(line, ": <") {
 			continue
 		}
 
-		// Extract interface name (before the colon)
-		parts := strings.Split(line, ":")
+		// Extract interface name
+		parts := strings.Split(line, ": ")
 		if len(parts) < 2 {
 			continue
 		}
 
-		interfaceName := strings.TrimSpace(parts[0])
+		interfaceName := strings.TrimSpace(parts[1])
 
 		// Skip loopback interface
 		if interfaceName == "lo" {
 			continue
 		}
 
-		interfaces = append(interfaces, interfaceName)
+		// Check if interface is UP
+		if !strings.Contains(line, "UP") {
+			continue
+		}
 
-		// Prefer ethernet interfaces (eth*, en*, eno*, ens*)
-		if strings.HasPrefix(interfaceName, "eth") ||
+		// Categorize interface
+		isWifi := strings.HasPrefix(interfaceName, "wlan") ||
+			strings.HasPrefix(interfaceName, "wl")
+
+		isEthernet := strings.HasPrefix(interfaceName, "eth") ||
 			strings.HasPrefix(interfaceName, "en") ||
 			strings.HasPrefix(interfaceName, "eno") ||
-			strings.HasPrefix(interfaceName, "ens") {
+			strings.HasPrefix(interfaceName, "ens")
+
+		if isEthernet {
 			ethernetInterfaces = append(ethernetInterfaces, interfaceName)
+		} else if !isWifi {
+			// Add non-wifi, non-ethernet interfaces to other list
+			otherInterfaces = append(otherInterfaces, interfaceName)
+		} else {
+			// Wifi interfaces go last
+			otherInterfaces = append(otherInterfaces, interfaceName)
 		}
 	}
 
 	if err := scanner.Err(); err != nil {
-		return "", fmt.Errorf("error reading /proc/net/dev: %v", err)
+		return "", fmt.Errorf("error parsing ip link output: %v", err)
 	}
 
-	// Return first ethernet interface if available
+	// Prefer ethernet interfaces
 	if len(ethernetInterfaces) > 0 {
 		return ethernetInterfaces[0], nil
 	}
 
-	// Return first available interface
-	if len(interfaces) > 0 {
-		return interfaces[0], nil
+	// Fall back to other UP interfaces
+	if len(otherInterfaces) > 0 {
+		return otherInterfaces[0], nil
 	}
 
-	return "", fmt.Errorf("no network interface found")
+	return "", fmt.Errorf("no UP network interface found")
+}
+
+// GetInterfaceMac returns the MAC address for a given interface
+func GetInterfaceMac(iface string) (string, error) {
+	// Execute ip link show for specific interface
+	cmd := exec.Command("ip", "link", "show", iface)
+	output, err := cmd.Output()
+	if err != nil {
+		return "", fmt.Errorf("failed to get MAC address for %s: %v", iface, err)
+	}
+
+	scanner := bufio.NewScanner(strings.NewReader(string(output)))
+	for scanner.Scan() {
+		line := strings.TrimSpace(scanner.Text())
+
+		// Look for line with "link/ether" or "link/loopback"
+		if strings.HasPrefix(line, "link/ether ") {
+			parts := strings.Fields(line)
+			if len(parts) >= 2 {
+				return parts[1], nil
+			}
+		}
+	}
+
+	return "", fmt.Errorf("MAC address not found for interface %s", iface)
+}
+
+// FindInterfaceByMac finds an interface name by its MAC address
+func FindInterfaceByMac(macAddr string) (string, error) {
+	// Normalize MAC address to lowercase
+	macAddr = strings.ToLower(strings.TrimSpace(macAddr))
+
+	// Execute ip link show command
+	cmd := exec.Command("ip", "link", "show")
+	output, err := cmd.Output()
+	if err != nil {
+		return "", fmt.Errorf("failed to execute ip link: %v", err)
+	}
+
+	var currentInterface string
+	scanner := bufio.NewScanner(strings.NewReader(string(output)))
+
+	for scanner.Scan() {
+		line := scanner.Text()
+
+		// Interface line (format: "2: eth0: <BROADCAST,MULTICAST,UP,LOWER_UP> ...")
+		if strings.Contains(line, ": <") {
+			parts := strings.Split(line, ": ")
+			if len(parts) >= 2 {
+				currentInterface = strings.TrimSpace(parts[1])
+			}
+			continue
+		}
+
+		// MAC address line (format: "    link/ether aa:bb:cc:dd:ee:ff ...")
+		line = strings.TrimSpace(line)
+		if strings.HasPrefix(line, "link/ether ") && currentInterface != "" {
+			parts := strings.Fields(line)
+			if len(parts) >= 2 {
+				foundMac := strings.ToLower(parts[1])
+				if foundMac == macAddr {
+					return currentInterface, nil
+				}
+			}
+		}
+	}
+
+	if err := scanner.Err(); err != nil {
+		return "", fmt.Errorf("error parsing ip link output: %v", err)
+	}
+
+	return "", fmt.Errorf("no interface found with MAC address %s", macAddr)
 }
 
 // ValidateDisk checks if the specified disk exists and is valid
@@ -174,36 +258,14 @@ func ValidateInterface(iface string) error {
 		return fmt.Errorf("interface parameter is empty")
 	}
 
-	// Check if interface exists in /proc/net/dev
-	file, err := os.Open("/proc/net/dev")
+	// Execute ip link show for specific interface
+	cmd := exec.Command("ip", "link", "show", iface)
+	err := cmd.Run()
 	if err != nil {
-		return fmt.Errorf("failed to open /proc/net/dev: %v", err)
-	}
-	defer file.Close()
-
-	scanner := bufio.NewScanner(file)
-	// Skip header lines
-	scanner.Scan()
-	scanner.Scan()
-
-	for scanner.Scan() {
-		line := strings.TrimSpace(scanner.Text())
-		if line == "" {
-			continue
-		}
-
-		parts := strings.Split(line, ":")
-		if len(parts) < 2 {
-			continue
-		}
-
-		interfaceName := strings.TrimSpace(parts[0])
-		if interfaceName == iface {
-			return nil
-		}
+		return fmt.Errorf("interface %s not found", iface)
 	}
 
-	return fmt.Errorf("interface %s not found", iface)
+	return nil
 }
 
 // ResolveDisk handles disk parameter resolution (provided or detected) with validation
@@ -226,9 +288,20 @@ func ResolveDisk(providedDisk string) (string, error) {
 }
 
 // ResolveInterface handles interface parameter resolution (provided or detected) with validation
+// Supports interface name or MAC address as input
 func ResolveInterface(providedInterface string) (string, error) {
 	if providedInterface != "" {
-		// Validate provided interface
+		// Check if providedInterface is a MAC address (contains colons)
+		if strings.Contains(providedInterface, ":") {
+			// Try to find interface by MAC address
+			iface, err := FindInterfaceByMac(providedInterface)
+			if err != nil {
+				return "", fmt.Errorf("invalid MAC address parameter: %v", err)
+			}
+			return iface, nil
+		}
+
+		// Validate provided interface name
 		if err := ValidateInterface(providedInterface); err != nil {
 			return "", fmt.Errorf("invalid interface parameter: %v", err)
 		}
@@ -245,16 +318,39 @@ func ResolveInterface(providedInterface string) (string, error) {
 }
 
 // ResolveSystemInfo resolves both disk and interface parameters with validation
-func ResolveSystemInfo(providedDisk, providedInterface string) (string, string, error) {
+// Returns disk, interface, and interface MAC address
+func ResolveSystemInfo(providedDisk, providedInterface string) (string, string, string, error) {
 	disk, err := ResolveDisk(providedDisk)
 	if err != nil {
-		return "", "", err
+		return "", "", "", err
 	}
 
 	iface, err := ResolveInterface(providedInterface)
 	if err != nil {
-		return "", "", err
+		return "", "", "", err
 	}
 
-	return disk, iface, nil
+	// Get MAC address for the interface
+	mac, err := GetInterfaceMac(iface)
+	if err != nil {
+		return "", "", "", fmt.Errorf("failed to get MAC address: %v", err)
+	}
+
+	return disk, iface, mac, nil
+}
+
+// GetPartitionSuffix returns the partition suffix based on disk type
+// For mmcblk, sd, vd, xvd disks: returns "1" and "2"
+// For nvme disks: returns "p1" and "p2"
+func GetPartitionSuffix(disk string) (string, string) {
+	// Extract the base disk name from the path
+	diskName := strings.TrimPrefix(disk, "/dev/")
+
+	// Check if it's an nvme disk
+	if strings.HasPrefix(diskName, "nvme") {
+		return "p1", "p2"
+	}
+
+	// For mmcblk, sd, vd, xvd disks
+	return "1", "2"
 }
