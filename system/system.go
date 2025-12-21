@@ -340,17 +340,17 @@ func ResolveSystemInfo(providedDisk, providedInterface string) (string, string, 
 }
 
 // GetPartitionSuffix returns the partition suffix based on disk type
-// For mmcblk, sd, vd, xvd disks: returns "1" and "2"
-// For nvme disks: returns "p1" and "p2"
+// For nvme and mmcblk disks: returns "p1" and "p2"
+// For sd, vd, xvd disks: returns "1" and "2"
 func GetPartitionSuffix(disk string) (string, string) {
 	// Extract the base disk name from the path
 	diskName := strings.TrimPrefix(disk, "/dev/")
 
-	// Check if it's an nvme disk
-	if strings.HasPrefix(diskName, "nvme") {
+	// Check if it's an nvme or mmcblk disk
+	if strings.HasPrefix(diskName, "nvme") || strings.HasPrefix(diskName, "mmcblk") {
 		return "p1", "p2"
 	}
 
-	// For mmcblk, sd, vd, xvd disks
+	// For sd, vd, xvd disks
 	return "1", "2"
 }
