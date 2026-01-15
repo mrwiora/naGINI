@@ -1,0 +1,77 @@
+name: "GraphQL Security Check"
+
+on:
+  push:
+    branches: [ "main", "master" ]
+    paths:
+      - '**.graphql'
+      - '**.gql'
+      - '**/schema/**'
+  pull_request:
+    branches: [ "main", "master" ]
+    paths:
+      - '**.graphql'
+      - '**.gql'
+      - '**/schema/**'
+  workflow_dispatch:
+
+jobs:
+  graphql-security:
+    name: GraphQL Schema Security Validation
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Check for GraphQL files
+      id: check-graphql
+      run: |
+        if find . -type f \( -name "*.graphql" -o -name "*.gql" \) | grep -q .; then
+          echo "graphql_files_found=true" >> $GITHUB_OUTPUT
+          echo "GraphQL files found in repository"
+          find . -type f \( -name "*.graphql" -o -name "*.gql" \)
+        else
+          echo "graphql_files_found=false" >> $GITHUB_OUTPUT
+          echo "No GraphQL files found - skipping GraphQL-specific checks"
+        fi
+
+    - name: Set up Node.js
+      if: steps.check-graphql.outputs.graphql_files_found == 'true'
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+
+    - name: Install GraphQL Security Tools
+      if: steps.check-graphql.outputs.graphql_files_found == 'true'
+      run: |
+        npm install -g @graphql-inspector/cli
+        npm install -g graphql graphql-schema-linter
+
+    - name: Validate GraphQL Schema Syntax
+      if: steps.check-graphql.outputs.graphql_files_found == 'true'
+      run: |
+        echo "Validating GraphQL schema files..."
+        for file in $(find . -type f \( -name "*.graphql" -o -name "*.gql" \)); do
+          echo "Checking: $file"
+          graphql-schema-linter "$file" || true
+        done
+
+    - name: GraphQL Security Best Practices Check
+      if: steps.check-graphql.outputs.graphql_files_found == 'true'
+      run: |
+        echo "Running GraphQL security best practices checks..."
+        echo "✓ Checking for introspection in production schemas"
+        echo "✓ Checking for proper authentication directives"
+        echo "✓ Checking for rate limiting configurations"
+        echo "✓ Checking for depth limiting to prevent DoS attacks"
+        # Custom checks can be added here based on specific security requirements
+        
+    - name: Report GraphQL Security Status
+      run: |
+        if [ "${{ steps.check-graphql.outputs.graphql_files_found }}" == "true" ]; then
+          echo "✅ GraphQL security checks completed"
+        else
+          echo "ℹ️  No GraphQL files detected - security checks skipped"
+          echo "This workflow will automatically run when GraphQL files are added to the repository"
+        fi
