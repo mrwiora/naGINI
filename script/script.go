@@ -155,25 +155,19 @@ func ExecuteScript(scriptContent []byte, disk, iface, interfaceMac, password str
 	timestamp := time.Now().Unix()
 	logFileName := fmt.Sprintf("naGINI_%d.log", timestamp)
 	logFilePath := filepath.Join("/tmp", logFileName)
-	logFile, err := os.Create(logFilePath)
-	if err != nil {
-		return fmt.Errorf("failed to create log file: %v", err)
-	}
-	defer logFile.Close()
-
-	// Execute the script with bash -e (exit on first error)
-	cmd := exec.Command("bash", "-e", tmpFile.Name())
-
-	// Capture both stdout and stderr, writing to console and log file
-	stdoutWriter := io.MultiWriter(os.Stdout, logFile)
-	stderrWriter := io.MultiWriter(os.Stderr, logFile)
-
-	cmd.Stdout = stdoutWriter
-	cmd.Stderr = stderrWriter
-	cmd.Stdin = os.Stdin
 
 	// Get partition suffixes based on disk type
 	partition1, partition2 := system.GetPartitionSuffix(disk)
+
+	// Use 'script' command to capture output without interfering with live updates
+	// script command: -c runs command, -e returns exit code of child, -f flushes output, -q is quiet
+	cmd := exec.Command("script", "-e", "-f", "-q", "-c",
+		fmt.Sprintf("bash -e %s", tmpFile.Name()),
+		logFilePath)
+
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	cmd.Stdin = os.Stdin
 
 	// Set environment variables for the script
 	cmd.Env = append(os.Environ(),
