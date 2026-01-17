@@ -74,7 +74,7 @@ func GetPassword(scriptID string) string {
 
 // ConfirmExecution asks user to confirm script execution
 func ConfirmExecution() bool {
-	fmt.Print("\nSTARTCODE verified. Do you want to proceed with executing this script? (y/N): ")
+	fmt.Print("\nDo you want to proceed with executing this script? (y/N): ")
 
 	reader := bufio.NewReader(os.Stdin)
 	input, err := reader.ReadString('\n')
@@ -158,6 +158,13 @@ func ShowScriptMetadata(metadata ScriptMetadata) {
 		fmt.Printf("%sDescription: %s%s\n", Green, metadata.Info, Reset)
 	}
 	fmt.Printf("%s==============================%s\n\n", Green, Reset)
+}
+
+// ShowEncryptionStatus displays encryption information
+func ShowEncryptionStatus(wasEncrypted bool) {
+	if wasEncrypted {
+		fmt.Printf("%s✓ Script was encrypted and has been decrypted successfully%s\n", Green, Reset)
+	}
 }
 
 // ShowBaseURL displays which base URL is being used

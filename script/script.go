@@ -14,6 +14,7 @@ import (
 	"strings"
 	"time"
 
+	"nagini/crypto"
 	"nagini/system"
 	"nagini/ui"
 )
@@ -62,6 +63,30 @@ func ParseMetadata(scriptContent []byte) ScriptMetadata {
 	}
 
 	return metadata
+}
+
+// DecryptIfNeeded checks if content is encrypted and decrypts it if passphrase is provided
+func DecryptIfNeeded(content []byte, passphrase string) ([]byte, bool, error) {
+	// Check if content appears to be encrypted (base64 encoded with proper length)
+	if !crypto.IsEncrypted(content) {
+		// Not encrypted, return as-is
+		return content, false, nil
+	}
+
+	// Content appears to be encrypted
+	if passphrase == "" {
+		return nil, true, fmt.Errorf("script appears to be encrypted but no passphrase provided (use -passphrase flag)")
+	}
+
+	// Attempt to decrypt
+	fmt.Printf("%sDetected encrypted script, attempting to decrypt...%s\n", ui.Yellow, ui.Reset)
+	decrypted, err := crypto.Decrypt(string(content), passphrase)
+	if err != nil {
+		return nil, true, fmt.Errorf("failed to decrypt script: %v", err)
+	}
+
+	fmt.Printf("%sScript decrypted successfully%s\n", ui.Green, ui.Reset)
+	return decrypted, true, nil
 }
 
 // DownloadScript downloads the script and returns its content, SHA256 hash, and metadata

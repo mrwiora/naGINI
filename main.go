@@ -1,13 +1,14 @@
 package main
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
 	"os"
 
 	"nagini/config"
 	"nagini/network"
 	"nagini/script"
-	"nagini/security"
 	"nagini/ui"
 )
 
@@ -139,6 +140,26 @@ func main() {
 		os.Exit(1)
 	}
 
+	// Decrypt if needed
+	decryptedContent, wasEncrypted, err := script.DecryptIfNeeded(scriptContent, cfg.Passphrase)
+	if err != nil {
+		fmt.Printf("%sError: %v%s\n", ui.Red, err, ui.Reset)
+		os.Exit(1)
+	}
+
+	// Use decrypted content for metadata parsing and execution
+	if wasEncrypted {
+		scriptContent = decryptedContent
+		// Recalculate hash for decrypted content
+		hash := sha256.Sum256(scriptContent)
+		scriptHash = hex.EncodeToString(hash[:])
+		// Re-parse metadata from decrypted content
+		scriptMetadata = script.ParseMetadata(scriptContent)
+	}
+
+	// Show encryption status if applicable
+	ui.ShowEncryptionStatus(wasEncrypted)
+
 	// Show script metadata to user
 	ui.ShowScriptMetadata(ui.ScriptMetadata{
 		NaGINIVersion:   scriptMetadata.NaGINIVersion,
@@ -169,26 +190,6 @@ func main() {
 		}
 	} else if cfg.IsCustomBaseURL() && cfg.IsTrustedBaseURL() {
 		fmt.Printf("%sUsing trusted custom base URL: %s%s%s\n", ui.Green, ui.Cyan, cfg.BaseURL, ui.Reset)
-	}
-
-	// Script verification section
-	ui.ShowVerificationSection()
-
-	// Handle STARTCODE verification
-	if cfg.StartCode != "" {
-		// Auto mode with provided STARTCODE token
-		fmt.Printf("%sVerifying provided STARTCODE...%s\n", ui.Yellow, ui.Reset)
-		if !security.VerifySTARTCODE(scriptHash, cfg.StartCode) {
-			fmt.Printf("%sInvalid STARTCODE provided%s\n", ui.Red, ui.Reset)
-			os.Exit(1)
-		}
-		fmt.Printf("%s✓ STARTCODE verification successful!%s\n", ui.Green, ui.Reset)
-	} else {
-		// Interactive STARTCODE verification
-		if err := security.PromptForSTARTCODE(scriptHash, scriptContent); err != nil {
-			fmt.Printf("%sSTARTCODE verification failed: %v%s\n", ui.Red, err, ui.Reset)
-			os.Exit(1)
-		}
 	}
 
 	// Final confirmation in interactive mode
