@@ -53,7 +53,6 @@ func main() {
 	}
 
 	var info config.SystemInfo
-	var scriptID string
 	var autoMode bool
 
 	// Check if all required parameters are provided for auto mode
@@ -76,7 +75,6 @@ func main() {
 			fmt.Printf("%s%v%s\n", ui.Red, err, ui.Reset)
 			os.Exit(1)
 		}
-		scriptID = cfg.GetScriptID()
 	} else {
 		// Resolve system info interactively
 		var err error
