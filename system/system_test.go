@@ -46,8 +46,8 @@ func TestGetPartitionSuffix(t *testing.T) {
 		{
 			name:      "MMC/SD card (mmcblk)",
 			disk:      "/dev/mmcblk0",
-			wantPart1: "1",
-			wantPart2: "2",
+			wantPart1: "p1",
+			wantPart2: "p2",
 		},
 		{
 			name:      "Another NVMe disk",
