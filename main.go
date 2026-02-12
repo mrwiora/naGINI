@@ -22,8 +22,8 @@ func main() {
 	// Parse command line flags first
 	cfg := config.ParseFlags()
 
-	// Show base URL being used
-	ui.ShowBaseURL(cfg.BaseURL)
+	// Show script URL being used
+	ui.ShowScriptURL(cfg.ScriptURL)
 
 	// Show mode information
 	ui.ShowModeInfo(cfg.IsAutoMode())
@@ -53,7 +53,6 @@ func main() {
 	}
 
 	var info config.SystemInfo
-	var scriptID string
 	var autoMode bool
 
 	// Check if all required parameters are provided for auto mode
@@ -67,7 +66,7 @@ func main() {
 		ui.ShowAutoModeParameters(config.SystemInfo{
 			Disk:      cfg.Disk,
 			Interface: cfg.Interface,
-		}, cfg.ScriptName, cfg.BaseURL)
+		}, cfg.ScriptURL)
 
 		// Resolve system info for auto mode
 		var err error
@@ -76,7 +75,6 @@ func main() {
 			fmt.Printf("%s%v%s\n", ui.Red, err, ui.Reset)
 			os.Exit(1)
 		}
-		scriptID = cfg.ScriptName
 	} else {
 		// Resolve system info interactively
 		var err error
@@ -109,18 +107,19 @@ func main() {
 	// Script configuration section
 	ui.ShowScriptSection()
 
-	// Get script ID
-	if cfg.ScriptName != "" {
-		scriptID = cfg.ScriptName
+	// Get script URL
+	if cfg.ScriptURL != "" {
+		scriptID = cfg.GetScriptID()
 	} else {
 		var err error
-		scriptID, err = ui.GetScriptID()
+		scriptURL, err := ui.GetScriptURL()
 		if err != nil {
-			fmt.Printf("%sError getting script ID: %v%s\n", ui.Red, err, ui.Reset)
+			fmt.Printf("%sError getting script URL: %v%s\n", ui.Red, err, ui.Reset)
 			os.Exit(1)
 		}
-		// Update config with user-provided script ID
-		cfg.ScriptName = scriptID
+		// Update config with user-provided script URL
+		cfg.ScriptURL = scriptURL
+		scriptID = cfg.GetScriptID()
 	}
 
 	// Get password using script ID
@@ -129,8 +128,8 @@ func main() {
 	// Add password to environment variables
 	os.Setenv("PASSWORD", password)
 
-	// Construct script URL
-	scriptURL := cfg.GetScriptURLWithID(scriptID)
+	// Use the full script URL directly
+	scriptURL := cfg.GetScriptURL()
 	fmt.Printf("\nScript URL: %s%s%s\n", ui.Cyan, scriptURL, ui.Reset)
 
 	// Download the script and get its hash and metadata

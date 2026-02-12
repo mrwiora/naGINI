@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
-	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -41,27 +40,26 @@ func ConfirmWithUser(info config.SystemInfo) bool {
 	return input == "y" || input == "yes"
 }
 
-// GetScriptID prompts user for the script ID
-func GetScriptID() (string, error) {
-	fmt.Print("Enter the script ID (e.g., 1234affe): ")
+// GetScriptURL prompts user for the full script URL
+func GetScriptURL() (string, error) {
+	fmt.Print("Enter the script URL (e.g., https://script.0x7e.eu/b343cbd0): ")
 	reader := bufio.NewReader(os.Stdin)
 	input, err := reader.ReadString('\n')
 	if err != nil {
-		return "", fmt.Errorf("error reading script ID: %v", err)
+		return "", fmt.Errorf("error reading script URL: %v", err)
 	}
 
-	scriptID := strings.TrimSpace(input)
-	if scriptID == "" {
-		return "", fmt.Errorf("script ID cannot be empty")
+	scriptURL := strings.TrimSpace(input)
+	if scriptURL == "" {
+		return "", fmt.Errorf("script URL cannot be empty")
 	}
 
-	// Basic validation - alphanumeric characters only
-	validID := regexp.MustCompile(`^[a-zA-Z0-9]+$`)
-	if !validID.MatchString(scriptID) {
-		return "", fmt.Errorf("script ID can only contain alphanumeric characters")
+	// Basic validation - must look like a URL
+	if !strings.HasPrefix(scriptURL, "http://") && !strings.HasPrefix(scriptURL, "https://") {
+		return "", fmt.Errorf("script URL must start with http:// or https://")
 	}
 
-	return scriptID, nil
+	return scriptURL, nil
 }
 
 // GetPassword uses script ID as password
@@ -93,13 +91,12 @@ func ShowSystemDetectionSection() {
 }
 
 // ShowAutoModeParameters displays provided parameters for automatic mode
-func ShowAutoModeParameters(info config.SystemInfo, scriptID, baseURL string) {
+func ShowAutoModeParameters(info config.SystemInfo, scriptURL string) {
 	fmt.Printf("Using provided parameters:\n")
 	fmt.Printf("  DISK: %s%s%s\n", White, info.Disk, Reset)
 	fmt.Printf("  INTERFACE: %s%s%s\n", White, info.Interface, Reset)
 	fmt.Printf("  INTERFACE MAC: %s%s%s\n", White, info.InterfaceMac, Reset)
-	fmt.Printf("  SCRIPT: %s%s%s\n", White, scriptID, Reset)
-	fmt.Printf("  Base URL: %s%s%s\n", White, baseURL, Reset)
+	fmt.Printf("  Script URL: %s%s%s\n", White, scriptURL, Reset)
 }
 
 // ShowConfigurationSummary displays all configuration before execution
@@ -167,9 +164,11 @@ func ShowEncryptionStatus(wasEncrypted bool) {
 	}
 }
 
-// ShowBaseURL displays which base URL is being used
-func ShowBaseURL(baseURL string) {
-	fmt.Printf("Using base URL: %s%s%s\n", Cyan, baseURL, Reset)
+// ShowScriptURL displays which script URL is being used
+func ShowScriptURL(scriptURL string) {
+	if scriptURL != "" {
+		fmt.Printf("Using script URL: %s%s%s\n", Cyan, scriptURL, Reset)
+	}
 }
 
 // ShowModeInfo displays whether running in interactive or automated mode
